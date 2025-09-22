@@ -866,12 +866,7 @@ class CleanPDFViewer {
                             <span class="book-icon">📖</span>
                         </div>
                         <h4><?php echo esc_html($book->title); ?></h4>
-                        <?php if ($atts['show_description'] === 'true' && !empty($book->description)): ?>
-                            <p class="book-description"><?php echo esc_html(wp_trim_words($book->description, 15)); ?></p>
-                        <?php endif; ?>
-                        <div class="book-meta">
-                            <small class="book-size"><?php echo esc_html($this->format_file_size($book->file_size)); ?></small>
-                        </div>
+                                                
                         <button class="read-book-btn <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'active' : ''; ?>" 
                                 data-book-id="<?php echo esc_attr($book->id); ?>"
                                 <?php echo $index === 0 ? 'data-auto-load="true"' : ''; ?>>
@@ -1030,7 +1025,7 @@ class CleanPDFViewer {
         
         ob_start();
         ?>
-        <div class="clean-pdf-viewer-container" style="width: 100%; height: 600px;">
+        <div class="clean-pdf-viewer-container" style="width: 100%; height: auto;">
             <div class="pdf-controls">
                 <div class="pdf-controls-left">
                     <button class="pdf-btn pdf-prev" data-viewer="<?php echo esc_attr($viewer_id); ?>">← Previous</button>
