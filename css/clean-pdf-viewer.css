@@ -1,13 +1,315 @@
+/* Enhanced Book Selector Styles */
+.pdf-book-selector {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.pdf-book-selector h3 {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 30px;
+    font-size: 24px;
+}
+
+.book-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+    margin: 20px 0;
+}
+
+.book-item {
+    border: 1px solid #e1e8ed;
+    border-radius: 12px;
+    padding: 25px;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.book-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3498db, #9b59b6);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.book-item:hover::before {
+    transform: scaleX(1);
+}
+
+.book-item:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-color: #3498db;
+}
+
+.book-cover {
+    font-size: 56px;
+    margin-bottom: 20px;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.book-item:hover .book-cover {
+    opacity: 1;
+}
+
+.book-icon {
+    display: inline-block;
+    background: linear-gradient(135deg, #3498db, #2c3e50);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.book-item h4 {
+    margin: 15px 0;
+    color: #2c3e50;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.book-description {
+    color: #7f8c8d;
+    font-size: 14px;
+    margin: 15px 0;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.read-book-btn {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Active state for selected book button */
+.read-book-btn.active {
+    background: linear-gradient(135deg, #27ae60, #219a52);
+    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+    transform: translateY(-2px);
+}
+
+.read-book-btn.active::after {
+    content: '✓';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-weight: bold;
+}
+
+.read-book-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.read-book-btn:hover::before {
+    left: 100%;
+}
+
+.read-book-btn:hover:not(.active) {
+    background: linear-gradient(135deg, #2980b9, #1f639a);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+.read-book-btn:active {
+    transform: translateY(0);
+}
+
+/* Enhanced PDF Viewer Container */
+#pdf-viewer-container {
+    margin-top: 40px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.5s ease;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+#pdf-viewer-container.loaded {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Loading states */
+.pdf-viewer-loading {
+    text-align: center;
+    padding: 60px 20px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 12px;
+    color: #6c757d;
+}
+
+.pdf-viewer-loading .book-loading {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 20px;
+    border: 4px solid #e9ecef;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.pdf-viewer-loading p {
+    font-size: 18px;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* Error state */
+.pdf-viewer-error {
+    text-align: center;
+    padding: 60px 20px;
+    background: linear-gradient(135deg, #fff5f5, #fed7d7);
+    border: 1px solid #feb2b2;
+    border-radius: 12px;
+    color: #c53030;
+}
+
+.pdf-viewer-error h4 {
+    margin: 0 0 15px;
+    font-size: 20px;
+    color: #e53e3e;
+}
+
+.pdf-viewer-error p {
+    margin: 0 0 20px;
+    font-size: 16px;
+}
+
+.retry-btn {
+    background: #e53e3e;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s ease;
+}
+
+.retry-btn:hover {
+    background: #c53030;
+}
+
+.book-loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* First book auto-selected indicator */
+.book-item:first-child .read-book-btn:not(:hover) {
+    background: linear-gradient(135deg, #27ae60, #219a52);
+    animation: firstBookPulse 2s ease-in-out;
+}
+
+@keyframes firstBookPulse {
+    0%, 100% { box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3); }
+    50% { box-shadow: 0 6px 20px rgba(39, 174, 96, 0.5); }
+}
+
+/* Enhanced responsive design */
+@media (max-width: 768px) {
+    .book-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+    
+    .pdf-book-selector {
+        padding: 15px;
+    }
+    
+    .book-item {
+        padding: 20px;
+    }
+    
+    .book-cover {
+        font-size: 48px;
+    }
+    
+    #pdf-viewer-container {
+        margin-top: 30px;
+    }
+}
+
+@media (max-width: 480px) {
+    .book-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .pdf-book-selector h3 {
+        font-size: 20px;
+    }
+    
+    .book-item h4 {
+        font-size: 16px;
+    }
+    
+    .read-book-btn {
+        padding: 10px 20px;
+        font-size: 13px;
+    }
+    
+    .pdf-viewer-loading,
+    .pdf-viewer-error {
+        padding: 40px 15px;
+    }
+}
+
+/* Enhanced Clean PDF Viewer Container */
 .clean-pdf-viewer-container {
     border: 1px solid #ddd;
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
     background: #f9f9f9;
     position: relative;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
 }
 
 .pdf-controls {
-    background: #2c3e50;
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     padding: 15px;
     display: flex;
     justify-content: space-between;
@@ -55,14 +357,6 @@
 .pdf-btn:focus {
     outline: 2px solid #fff;
     outline-offset: 2px;
-}
-
-.pdf-download {
-    background: #27ae60 !important;
-}
-
-.pdf-download:hover {
-    background: #219a52 !important;
 }
 
 .pdf-fullscreen {
@@ -135,26 +429,6 @@
     text-align: center;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
-    .pdf-controls {
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .pdf-controls-left,
-    .pdf-controls-right {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .pdf-btn {
-        min-width: 100px;
-        padding: 10px 15px;
-        font-size: 14px;
-    }
-}
-
 /* Fullscreen styles */
 .clean-pdf-viewer-container.fullscreen {
     position: fixed !important;
@@ -175,19 +449,12 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* Fullscreen exit button styling */
 .clean-pdf-viewer-container.fullscreen .pdf-fullscreen {
     background: #e74c3c !important;
 }
 
 .clean-pdf-viewer-container.fullscreen .pdf-fullscreen:hover {
     background: #c0392b !important;
-}
-
-/* Accessibility improvements */
-.pdf-btn:focus-visible {
-    outline: 2px solid #fff;
-    outline-offset: 2px;
 }
 
 /* Screen reader only text */
@@ -201,4 +468,24 @@
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
+}
+
+/* Mobile responsiveness for PDF controls */
+@media (max-width: 768px) {
+    .pdf-controls {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .pdf-controls-left,
+    .pdf-controls-right {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .pdf-btn {
+        min-width: 100px;
+        padding: 10px 15px;
+        font-size: 14px;
+    }
 }
