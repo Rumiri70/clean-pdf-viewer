@@ -130,6 +130,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.addEventListenerWithCleanup(fullscreenBtn, 'click', () => this.toggleFullscreen());
             }
 
+             // Download
+            //this.container.querySelector(`[data-viewer="${this.viewerId}"].pdf//-download`).addEventListener('click', (e) => {
+               // this.downloadPdf(e.target.dataset.url);
+           // });
+
             // Touch/swipe support
             this.addTouchSupport();
             
@@ -401,8 +406,32 @@ document.addEventListener('DOMContentLoaded', function() {
             
             errorDiv.textContent = errorMessage;
         }
+
+
+
+                downloadPdf(url) {
+            try {
+                // Create a temporary link element
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = url.split('/').pop() || 'document.pdf';
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                
+                // Add to DOM, click, then remove
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (error) {
+                console.error('Download failed:', error);
+                // Fallback: open in new tab
+                window.open(url, '_blank', 'noopener,noreferrer');
+            }
+        }
+
     }
 
+    
     // Fixed Book Selector functionality
     class PDFBookSelector {
         constructor() {
@@ -623,4 +652,7 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         document.head.appendChild(style);
     }
+
+
+    
 });

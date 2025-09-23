@@ -367,6 +367,17 @@
     background: #8e44ad !important;
 }
 
+
+.pdf-download-shortcode {
+    background: 
+#27ae60 !important;
+}
+
+.pdf-download-shortcode:hover {
+    background: 
+#219a52 !important;
+}
+
 .pdf-page-info {
     color: white;
     font-weight: bold;
