@@ -95,16 +95,24 @@
     background: linear-gradient(135deg, #3498db, #2980b9);
     color: white;
     border: none;
-    padding: 12px 24px;
-    border-radius: 25px;
+    padding: 6px 17px;
     cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;
+    font-size: 16px;
     transition: all 0.3s ease;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     position: relative;
     overflow: hidden;
+}
+
+.download-book-btn {
+
+    background: #2ecc71;
+    padding: 6px 17px;
+    color: white;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+
 }
 
 /* Active state for selected book button */
@@ -138,19 +146,7 @@
     left: 100%;
 }
 
-.download-book-btn {
 
-    background: #2ecc71;
-    color: white;
-    padding: 15px 30px;
-    border: none;
-    border-radius: 5px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.3s ease;
-
-}
 
 
 
