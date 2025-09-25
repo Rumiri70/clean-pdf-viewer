@@ -745,69 +745,70 @@ class CleanPDFViewer {
     }
 
     // Enhanced PDF Viewer shortcode
-    public function pdf_viewer_shortcode($atts) {
-        $atts = shortcode_atts(array(
-            'url' => '',
-            'pdf' => '',
-            'book_id' => '',
-            'width' => '100%',
-            'height' => '600px'
-        ), $atts);
 
-        // Handle book_id parameter
-        if (!empty($atts['book_id'])) {
-            $book = $this->get_book_by_id(intval($atts['book_id']));
-            if (!$book || $book->status !== 'active') {
-                return '<p>Book not found or not available.</p>';
-            }
-            
-            // Create secure URL for the PDF
-            $atts['url'] = add_query_arg(array(
-                'action' => 'serve_protected_pdf',
-                'book_id' => $book->id,
-                'nonce' => wp_create_nonce('serve_pdf_' . $book->id)
-            ), admin_url('admin-ajax.php'));
-        } else {
-            // Use 'pdf' if 'url' is empty (backward compatibility)
-            $atts['url'] = !empty($atts['url']) ? $atts['url'] : $atts['pdf'];
-        }
+// Remove the M-Pesa modal from the PDF viewer shortcode
+public function pdf_viewer_shortcode($atts) {
+    $atts = shortcode_atts(array(
+        'url' => '',
+        'pdf' => '',
+        'book_id' => '',
+        'width' => '100%',
+        'height' => '600px'
+    ), $atts);
 
-        if (empty($atts['url'])) {
-            return '<p>Please provide a PDF URL or book ID.</p>';
+    // Handle book_id parameter
+    if (!empty($atts['book_id'])) {
+        $book = $this->get_book_by_id(intval($atts['book_id']));
+        if (!$book || $book->status !== 'active') {
+            return '<p>Book not found or not available.</p>';
         }
         
-        $viewer_id = 'pdf-viewer-' . uniqid();
-        
-        ob_start();
-        ?>
-        <div class="clean-pdf-viewer-container" style="width: <?php echo esc_attr($atts['width']); ?>; height: <?php echo esc_attr($atts['height']); ?>;">
-            <div class="pdf-controls">
-                <div class="pdf-controls-left">
-                    <button class="pdf-btn pdf-prev" data-viewer="<?php echo esc_attr($viewer_id); ?>">← Previous</button>
-                    <span class="pdf-page-info">Page <span class="pdf-current-page">1</span> of <span class="pdf-total-pages">-</span></span>
-                    <button class="pdf-btn pdf-next" data-viewer="<?php echo esc_attr($viewer_id); ?>">Next →</button>
-                </div>
-                <div class="pdf-controls-right">
-                    <button class="pdf-btn pdf-zoom-out" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom Out</button>
-                    <span class="pdf-zoom-level">100%</span>
-                    <button class="pdf-btn pdf-zoom-in" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom In</button>
-                    <button class="pdf-btn pdf-fullscreen" data-viewer="<?php echo esc_attr($viewer_id); ?>">Fullscreen</button>
-                    <!-- Render shortcode (hidden modal) -->
-                
-                </div>
-            </div>
-            <div class="pdf-viewer-wrapper">
-                <canvas id="<?php echo esc_attr($viewer_id); ?>" class="pdf-canvas" data-pdf-url="<?php echo esc_attr($atts['url']); ?>"></canvas>
-            </div>
-            <div class="pdf-loading">Loading PDF...</div>
-            <div class="pdf-error" style="display: none;">Error loading PDF. Please try again.</div>
-            <div aria-live="polite" class="sr-only"></div>
-        </div>
-        <?php
-        return ob_get_clean();
+        // Create secure URL for the PDF
+        $atts['url'] = add_query_arg(array(
+            'action' => 'serve_protected_pdf',
+            'book_id' => $book->id,
+            'nonce' => wp_create_nonce('serve_pdf_' . $book->id)
+        ), admin_url('admin-ajax.php'));
+    } else {
+        // Use 'pdf' if 'url' is empty (backward compatibility)
+        $atts['url'] = !empty($atts['url']) ? $atts['url'] : $atts['pdf'];
     }
 
-    // Enhanced Book Selector shortcode that uses the main PDF viewer shortcode
+    if (empty($atts['url'])) {
+        return '<p>Please provide a PDF URL or book ID.</p>';
+    }
+    
+    $viewer_id = 'pdf-viewer-' . uniqid();
+    
+    ob_start();
+    ?>
+    <div class="clean-pdf-viewer-container" style="width: <?php echo esc_attr($atts['width']); ?>; height: <?php echo esc_attr($atts['height']); ?>;">
+        <div class="pdf-controls">
+            <div class="pdf-controls-left">
+                <button class="pdf-btn pdf-prev" data-viewer="<?php echo esc_attr($viewer_id); ?>">← Previous</button>
+                <span class="pdf-page-info">Page <span class="pdf-current-page">1</span> of <span class="pdf-total-pages">-</span></span>
+                <button class="pdf-btn pdf-next" data-viewer="<?php echo esc_attr($viewer_id); ?>">Next →</button>
+            </div>
+            <div class="pdf-controls-right">
+                <button class="pdf-btn pdf-zoom-out" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom Out</button>
+                <span class="pdf-zoom-level">100%</span>
+                <button class="pdf-btn pdf-zoom-in" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom In</button>
+                <button class="pdf-btn pdf-fullscreen" data-viewer="<?php echo esc_attr($viewer_id); ?>">Fullscreen</button>
+            </div>
+        </div>
+        <div class="pdf-viewer-wrapper">
+            <canvas id="<?php echo esc_attr($viewer_id); ?>" class="pdf-canvas" data-pdf-url="<?php echo esc_attr($atts['url']); ?>"></canvas>
+        </div>
+        <div class="pdf-loading">Loading PDF...</div>
+        <div class="pdf-error" style="display: none;">Error loading PDF. Please try again.</div>
+        <div aria-live="polite" class="sr-only"></div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+
+// Enhanced Book Selector shortcode with M-Pesa download buttons
 public function book_selector_shortcode($atts) {
     $atts = shortcode_atts(array(
         'show_description' => 'true',
@@ -835,36 +836,23 @@ public function book_selector_shortcode($atts) {
                     </div>
                     <h4><?php echo esc_html($book->title); ?></h4>
                     <?php if ($atts['show_description'] === 'true' && !empty($book->description)): ?>
-                        <div><?php echo do_shortcode('[mpesa_download]'); ?>
-
-                <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                    const openBtn = document.getElementById('open-mpesa-modal');
-                    const modal = document.getElementById('mpesa-payment-modal');
-                    const closeBtn = modal.querySelector('.mpesa-close');
-                    const cancelBtn = modal.querySelector('.mpesa-cancel');
-
-                    // Open modal
-                    openBtn.addEventListener('click', () => {
-                    modal.style.display = 'block';
-                    });
-
-                    // Close modal
-                    closeBtn.addEventListener('click', () => {
-                        modal.style.display = 'none';
-                    });
-                    cancelBtn.addEventListener('click', () => {
-                        modal.style.display = 'none';
-                    });
-                    });
-                </script></div>
-                    <button class="read-book-btn <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'active' : ''; ?>" 
-                            data-book-id="<?php echo esc_attr($book->id); ?>"
-                            data-width="<?php echo esc_attr($atts['width']); ?>"
-                            data-height="<?php echo esc_attr($atts['height']); ?>"
-                            <?php echo $index === 0 ? 'data-auto-load="true"' : ''; ?>>
-                        <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'Currently Reading' : 'Read Book'; ?>
-                    </button>
+                        <p class="book-description"><?php echo esc_html(wp_trim_words($book->description, 15)); ?></p>
+                    <?php endif; ?>
+                    <p class="book-size"><?php echo esc_html($this->format_file_size($book->file_size)); ?></p>
+                    
+                    <div class="book-actions">
+                        <button class="read-book-btn <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'active' : ''; ?>" 
+                                data-book-id="<?php echo esc_attr($book->id); ?>"
+                                data-width="<?php echo esc_attr($atts['width']); ?>"
+                                data-height="<?php echo esc_attr($atts['height']); ?>"
+                                <?php echo $index === 0 ? 'data-auto-load="true"' : ''; ?>>
+                            <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'Currently Reading' : 'Read Book'; ?>
+                        </button>
+                        
+                        <button class="download-book-btn" data-book-id="<?php echo esc_attr($book->id); ?>">
+                            Download PDF
+                        </button>
+                    </div>
                 </div>
             <?php endforeach; ?>
         </div>
@@ -880,6 +868,9 @@ public function book_selector_shortcode($atts) {
             <?php endif; ?>
         </div>
     </div>
+
+    <!-- Render M-Pesa modal once for all books -->
+    <?php echo do_shortcode('[mpesa_download]'); ?>
 
     <script type="application/ld+json">
     {
@@ -902,10 +893,59 @@ public function book_selector_shortcode($atts) {
     }
     </script>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle download button clicks
+            document.querySelectorAll('.download-book-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Store the book ID for the M-Pesa modal
+                    const bookId = this.dataset.bookId;
+                    const modal = document.getElementById('mpesa-payment-modal');
+                    
+                    if (modal) {
+                        // Store book ID in modal for later use
+                        modal.setAttribute('data-book-id', bookId);
+                        modal.style.display = 'block';
+                    } else {
+                        console.error('M-Pesa modal not found');
+                        alert('Download system not available. Please try again later.');
+                    }
+                });
+            });
+
+            // Handle modal close buttons
+            const modal = document.getElementById('mpesa-payment-modal');
+            if (modal) {
+                const closeBtn = modal.querySelector('.mpesa-close');
+                const cancelBtn = modal.querySelector('.mpesa-cancel');
+
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', function() {
+                        modal.style.display = 'none';
+                    });
+                }
+
+                if (cancelBtn) {
+                    cancelBtn.addEventListener('click', function() {
+                        modal.style.display = 'none';
+                    });
+                }
+
+                // Close modal when clicking outside
+                window.addEventListener('click', function(event) {
+                    if (event.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+            }
+        });
+    </script>
+
     <?php
     return ob_get_clean();
 }
-
     // Enhanced serve_protected_pdf with better security and range support
     public function serve_protected_pdf() {
         // Verify request method
@@ -1293,7 +1333,7 @@ public function enqueue_scripts() {
         )
     ));
 }
-   private function get_inline_css() {
+private function get_inline_css() {
     return '
     .clean-pdf-viewer-container{border:1px solid #ddd;border-radius:12px;overflow:hidden;background:#f9f9f9;position:relative;box-shadow:0 5px 15px rgba(0,0,0,0.08)}
     .pdf-controls{background:linear-gradient(135deg,#2c3e50,#34495e);padding:15px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
@@ -1309,23 +1349,33 @@ public function enqueue_scripts() {
     .pdf-loading{background:rgba(0,0,0,0.8)}
     .pdf-error{background:#e74c3c}
     .pdf-book-selector{max-width:1200px;margin:0 auto;padding:20px}
-    .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:25px;margin:20px 0}
+    .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:25px;margin:20px 0}
     .book-item{border:1px solid #e1e8ed;border-radius:12px;padding:25px;text-align:center;transition:all 0.3s ease;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
     .book-item:hover{transform:translateY(-8px);box-shadow:0 8px 25px rgba(0,0,0,0.15)}
     .book-description{color:#666;font-size:14px;margin:10px 0}
     .book-size{color:#999;font-size:12px;font-weight:bold}
-    .read-book-btn{background:linear-gradient(135deg,#3498db,#2980b9);color:white;border:none;padding:12px 24px;border-radius:25px;cursor:pointer;font-weight:600;transition:all 0.3s ease;margin-top:15px}
+    .book-actions{display:flex;flex-direction:column;gap:10px;margin-top:15px}
+    .read-book-btn,.download-book-btn{border:none;padding:12px 24px;border-radius:25px;cursor:pointer;font-weight:600;transition:all 0.3s ease;font-size:14px;text-align:center}
+    .read-book-btn{background:linear-gradient(135deg,#3498db,#2980b9);color:white}
     .read-book-btn.active{background:linear-gradient(135deg,#27ae60,#219a52);box-shadow:0 4px 15px rgba(39,174,96,0.4)}
-    .read-book-btn:hover{transform:translateY(-2px)}
+    .download-book-btn{background:linear-gradient(135deg,#e67e22,#d35400);color:white}
+    .read-book-btn:hover,.download-book-btn:hover{transform:translateY(-2px)}
+    .download-book-btn:hover{background:linear-gradient(135deg,#d35400,#c0392b)}
     #pdf-viewer-container{margin-top:40px;opacity:0;transition:all 0.5s ease}
     #pdf-viewer-container.loaded{opacity:1}
     .pdf-viewer-placeholder{text-align:center;padding:60px 20px;color:#666;border:2px dashed #ddd;border-radius:12px;background:#f9f9f9}
     .pdf-viewer-loading{text-align:center;padding:40px;color:#666}
     .book-loading{width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid #3498db;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px}
     @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-    @media (max-width:768px){.pdf-controls{flex-direction:column}.book-grid{grid-template-columns:1fr}}
+    @media (max-width:768px){
+        .pdf-controls{flex-direction:column}
+        .book-grid{grid-template-columns:1fr}
+        .book-actions{flex-direction:row;justify-content:center}
+        .read-book-btn,.download-book-btn{flex:1;max-width:140px}
+    }
     ';
 }
+
 
     // Inline JS fallback (basic functionality)
     private function get_inline_js() {
