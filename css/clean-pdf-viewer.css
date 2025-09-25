@@ -138,6 +138,22 @@
     left: 100%;
 }
 
+.download-book-btn {
+
+    background: #2ecc71;
+    color: white;
+    padding: 15px 30px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s ease;
+
+}
+
+
+
 .read-book-btn:hover:not(.active) {
     background: linear-gradient(135deg, #2980b9, #1f639a);
     transform: translateY(-2px);
