@@ -829,10 +829,6 @@ class CleanPDFViewer {
                     <div class="book-item <?php echo $index === 0 ? 'first-book' : ''; ?>">
                         
                         <h4><?php echo esc_html($book->title); ?></h4>
-                        <?php if ($atts['show_description'] === 'true' && !empty($book->description)): ?>
-                            <p class="book-description"><?php echo esc_html(wp_trim_words($book->description, 15)); ?></p>
-                        <?php endif; ?>
-                        <p class="book-size"><?php echo esc_html($this->format_file_size($book->file_size)); ?></p>
                         
                         <div class="book-actions">
                             <button class="read-book-btn <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'active' : ''; ?>" 
