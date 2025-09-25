@@ -409,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
-            downloadPdf(url) {
+       /*     downloadPdf(url) {
         try {
             // Create a temporary link element
             const link = document.createElement('a');
@@ -427,11 +427,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Fallback: open in new tab
             window.open(url, '_blank', 'noopener,noreferrer');
         }
-        }
+        } */
 
-    }
-
-    
+    }    
     // Fixed Book Selector functionality
     class PDFBookSelector {
         constructor() {
