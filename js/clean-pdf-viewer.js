@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const loadingTask = pdfjsLib.getDocument({
                     url: this.pdfUrl,
-                    withCredentials: true, // Changed to true for protected PDFs
+                    withCredentials: true,
                     verbosity: 0
                 });
                 
@@ -130,16 +130,133 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.addEventListenerWithCleanup(fullscreenBtn, 'click', () => this.toggleFullscreen());
             }
 
-             // Download
-            //this.container.querySelector(`[data-viewer="${this.viewerId}"].pdf//-download`).addEventListener('click', (e) => {
-               // this.downloadPdf(e.target.dataset.url);
-           // });
+            // Download button - FIXED: Better modal handling
+            const downloadBtn = this.container.querySelector(`[data-viewer="${this.viewerId}"].pdf-download, #open-mpesa-modal`);
+            if (downloadBtn) {
+                this.addEventListenerWithCleanup(downloadBtn, 'click', (e) => {
+                    e.preventDefault();
+                    this.openDownloadModal();
+                });
+            }
 
             // Touch/swipe support
             this.addTouchSupport();
             
             // Keyboard navigation
             this.addKeyboardSupport();
+            
+            // Initialize modal after PDF loads
+            this.initializeModal();
+        }
+
+        // FIXED: Proper modal initialization
+        initializeModal() {
+            // Wait a bit to ensure DOM is fully ready
+            setTimeout(() => {
+                const modal = document.getElementById('mpesa-payment-modal');
+                const openBtn = document.getElementById('open-mpesa-modal');
+                
+                if (modal && openBtn) {
+                    // Remove any existing event listeners to prevent duplicates
+                    openBtn.replaceWith(openBtn.cloneNode(true));
+                    const newOpenBtn = document.getElementById('open-mpesa-modal');
+                    
+                    // Add new event listener
+                    this.addEventListenerWithCleanup(newOpenBtn, 'click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.openDownloadModal();
+                    });
+                    
+                    // Setup close buttons
+                    const closeBtn = modal.querySelector('.mpesa-close');
+                    const cancelBtn = modal.querySelector('.mpesa-cancel');
+                    
+                    if (closeBtn) {
+                        this.addEventListenerWithCleanup(closeBtn, 'click', () => this.closeDownloadModal());
+                    }
+                    
+                    if (cancelBtn) {
+                        this.addEventListenerWithCleanup(cancelBtn, 'click', () => this.closeDownloadModal());
+                    }
+                    
+                    // Close modal when clicking outside
+                    this.addEventListenerWithCleanup(modal, 'click', (e) => {
+                        if (e.target === modal) {
+                            this.closeDownloadModal();
+                        }
+                    });
+                    
+                    // ESC key to close modal
+                    this.addEventListenerWithCleanup(document, 'keydown', (e) => {
+                        if (e.key === 'Escape' && modal.style.display === 'block') {
+                            this.closeDownloadModal();
+                        }
+                    });
+                } else {
+                    console.warn('Modal elements not found - modal may not be properly rendered');
+                }
+            }, 500);
+        }
+
+        // FIXED: Modal control methods
+        openDownloadModal() {
+            const modal = document.getElementById('mpesa-payment-modal');
+            if (modal) {
+                modal.style.display = 'block';
+                modal.style.zIndex = '999999'; // Ensure it's on top
+                document.body.style.overflow = 'hidden'; // Prevent background scrolling
+                
+                // Focus on modal for accessibility
+                modal.setAttribute('aria-hidden', 'false');
+                const firstInput = modal.querySelector('input, button');
+                if (firstInput) {
+                    firstInput.focus();
+                }
+            } else {
+                console.error('Download modal not found');
+                // Fallback: try to trigger the shortcode modal creation
+                this.createFallbackModal();
+            }
+        }
+
+        closeDownloadModal() {
+            const modal = document.getElementById('mpesa-payment-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = ''; // Restore scrolling
+                modal.setAttribute('aria-hidden', 'true');
+            }
+        }
+
+        // FIXED: Fallback modal creation if shortcode fails
+        createFallbackModal() {
+            if (document.getElementById('mpesa-payment-modal')) {
+                return; // Modal already exists
+            }
+            
+            const modalHTML = `
+                <div id="mpesa-payment-modal" style="display: none; position: fixed; z-index: 999999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);" aria-hidden="true">
+                    <div style="background-color: white; margin: 10% auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; position: relative;">
+                        <span class="mpesa-close" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; position: absolute; right: 15px; top: 10px;">&times;</span>
+                        <h3 style="margin-top: 0;">Download PDF</h3>
+                        <p>To download this PDF, please complete the payment process.</p>
+                        <div style="text-align: center; margin: 20px 0;">
+                            <p><strong>Amount: KES 50</strong></p>
+                            <input type="tel" placeholder="Enter M-Pesa number (254...)" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px;">
+                            <button style="background: #00a651; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; width: 100%; margin: 5px 0;">Pay & Download</button>
+                            <button class="mpesa-cancel" style="background: #ccc; color: black; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; width: 100%; margin: 5px 0;">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Re-initialize modal after creation
+            setTimeout(() => {
+                this.initializeModal();
+            }, 100);
         }
 
         addKeyboardSupport() {
@@ -161,6 +278,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         e.preventDefault();
                         if (this.isFullscreen) {
                             this.toggleFullscreen();
+                        }
+                        // Also close modal if open
+                        const modal = document.getElementById('mpesa-payment-modal');
+                        if (modal && modal.style.display === 'block') {
+                            this.closeDownloadModal();
                         }
                         break;
                 }
@@ -407,28 +529,11 @@ document.addEventListener('DOMContentLoaded', function() {
             errorDiv.textContent = errorMessage;
         }
 
-
-
-                downloadPdf(url) {
-            try {
-                // Create a temporary link element
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = url.split('/').pop() || 'document.pdf';
-                link.target = '_blank';
-                link.rel = 'noopener noreferrer';
-                
-                // Add to DOM, click, then remove
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } catch (error) {
-                console.error('Download failed:', error);
-                // Fallback: open in new tab
-                window.open(url, '_blank', 'noopener,noreferrer');
-            }
+        // FIXED: Download method with better modal integration
+        downloadPdf(url) {
+            // First try to show payment modal
+            this.openDownloadModal();
         }
-
     }
 
     
@@ -601,6 +706,53 @@ document.addEventListener('DOMContentLoaded', function() {
         new PDFBookSelector();
     }
 
+    // FIXED: Global modal initialization for cases where shortcode renders after PDF viewer
+    function initializeGlobalModal() {
+        const modals = document.querySelectorAll('#mpesa-payment-modal');
+        if (modals.length > 1) {
+            // Remove duplicate modals
+            for (let i = 1; i < modals.length; i++) {
+                modals[i].remove();
+            }
+        }
+        
+        // Ensure modal works globally
+        const openBtns = document.querySelectorAll('#open-mpesa-modal');
+        const modal = document.getElementById('mpesa-payment-modal');
+        
+        if (modal && openBtns.length > 0) {
+            openBtns.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    modal.style.display = 'block';
+                    modal.style.zIndex = '999999';
+                    document.body.style.overflow = 'hidden';
+                });
+            });
+            
+            // Close functionality
+            const closeBtns = modal.querySelectorAll('.mpesa-close, .mpesa-cancel');
+            closeBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = '';
+                });
+            });
+            
+            // Close on outside click
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = '';
+                }
+            });
+        }
+    }
+
+    // Call global modal initialization with delay
+    setTimeout(initializeGlobalModal, 1000);
+
     // Add CSS for loading animations
     if (!document.querySelector('#pdf-viewer-loading-styles')) {
         const style = document.createElement('style');
@@ -649,10 +801,23 @@ document.addEventListener('DOMContentLoaded', function() {
             .retry-btn:hover {
                 background: #2980b9;
             }
+            
+            /* FIXED: Modal styles to ensure proper display */
+            #mpesa-payment-modal {
+                position: fixed !important;
+                z-index: 999999 !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                background-color: rgba(0,0,0,0.5) !important;
+                display: none !important;
+            }
+            
+            #mpesa-payment-modal.show {
+                display: block !important;
+            }
         `;
         document.head.appendChild(style);
     }
-
-
-    
 });

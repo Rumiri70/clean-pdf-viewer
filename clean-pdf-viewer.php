@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Clean PDF Viewer
  * Description: A clean PDF viewer with zoom, navigation, download, and fullscreen controls
- * Version: 2.0.1
+ * Version: 2.0.2
  * Author: Rumiri
  * Requires at least: 5.0
  * Tested up to: 6.6
@@ -20,6 +20,7 @@ if (!defined('ABSPATH')) {
 class CleanPDFViewer {
     
     private $table_name;
+    private static $modal_rendered = false; // Track if modal has been rendered
     
     public function __construct() {
         global $wpdb;
@@ -38,6 +39,7 @@ class CleanPDFViewer {
         // Frontend hooks
         add_action('init', array($this, 'init'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
+        add_action('wp_footer', array($this, 'render_global_modal')); // FIXED: Render modal once in footer
         
         // Shortcodes
         add_shortcode('clean_pdf_viewer', array($this, 'pdf_viewer_shortcode'));
@@ -54,6 +56,276 @@ class CleanPDFViewer {
         // Plugin hooks
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
+    }
+
+    // FIXED: Render modal once in footer to avoid duplication
+    public function render_global_modal() {
+        global $post;
+        
+        // Only render if we have PDF viewer shortcodes on the page
+        if (is_a($post, 'WP_Post') && 
+            (has_shortcode($post->post_content, 'clean_pdf_viewer') || 
+             has_shortcode($post->post_content, 'pdf_book_selector')) &&
+            !self::$modal_rendered) {
+            
+            // Check if mpesa_download shortcode exists
+            if (shortcode_exists('mpesa_download')) {
+                echo do_shortcode('[mpesa_download]');
+                self::$modal_rendered = true;
+            } else {
+                // Fallback modal if shortcode doesn't exist
+                $this->render_fallback_modal();
+            }
+        }
+    }
+
+    // FIXED: Fallback modal in case the mpesa shortcode doesn't exist
+    private function render_fallback_modal() {
+        if (self::$modal_rendered) return;
+        
+        ?>
+        <div id="mpesa-payment-modal" style="display: none;" aria-hidden="true" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+            <div class="mpesa-modal-overlay">
+                <div class="mpesa-modal-content">
+                    <div class="mpesa-modal-header">
+                        <h3 id="modal-title">Download PDF</h3>
+                        <button class="mpesa-close" aria-label="Close modal">&times;</button>
+                    </div>
+                    <div class="mpesa-modal-body">
+                        <p>To download this PDF document, please complete the payment process.</p>
+                        <div class="mpesa-payment-form">
+                            <div class="form-group">
+                                <label for="mpesa-amount">Amount:</label>
+                                <p class="amount-display"><strong>KES 50.00</strong></p>
+                            </div>
+                            <div class="form-group">
+                                <label for="mpesa-phone">M-Pesa Phone Number:</label>
+                                <input type="tel" id="mpesa-phone" placeholder="254XXXXXXXXX" maxlength="12" pattern="254[0-9]{9}">
+                                <small>Enter your M-Pesa registered phone number</small>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="mpesa-pay-btn" id="process-payment">
+                                    <span class="btn-text">Pay & Download</span>
+                                    <span class="btn-loading" style="display: none;">Processing...</span>
+                                </button>
+                                <button type="button" class="mpesa-cancel">Cancel</button>
+                            </div>
+                        </div>
+                        <div class="mpesa-status" id="payment-status" style="display: none;">
+                            <p class="status-message"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <style>
+        #mpesa-payment-modal {
+            position: fixed;
+            z-index: 999999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: none;
+        }
+        
+        .mpesa-modal-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100%;
+            padding: 20px;
+        }
+        
+        .mpesa-modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            position: relative;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .mpesa-modal-header {
+            padding: 20px 20px 0;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .mpesa-modal-header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 24px;
+        }
+        
+        .mpesa-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        
+        .mpesa-close:hover {
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .mpesa-modal-body {
+            padding: 0 20px 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .amount-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 0;
+            color: #00a651;
+            font-size: 20px;
+        }
+        
+        #mpesa-phone {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        #mpesa-phone:focus {
+            outline: none;
+            border-color: #00a651;
+        }
+        
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .mpesa-pay-btn {
+            flex: 1;
+            background: #00a651;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            position: relative;
+        }
+        
+        .mpesa-pay-btn:hover {
+            background: #008a43;
+        }
+        
+        .mpesa-pay-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .mpesa-cancel {
+            flex: 1;
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .mpesa-cancel:hover {
+            background: #5a6268;
+        }
+        
+        .mpesa-status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .mpesa-status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .mpesa-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .mpesa-status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        @media (max-width: 480px) {
+            .mpesa-modal-content {
+                margin: 10px;
+                max-width: none;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+        }
+        </style>
+        <?php
+        
+        self::$modal_rendered = true;
     }
 
     public function add_admin_menu() {
@@ -780,7 +1052,7 @@ class CleanPDFViewer {
         return $deleted_count;
     }
 
-    // Enhanced PDF Viewer shortcode
+    // FIXED: Enhanced PDF Viewer shortcode without inline modal
     public function pdf_viewer_shortcode($atts) {
         $atts = shortcode_atts(array(
             'url' => '',
@@ -828,30 +1100,8 @@ class CleanPDFViewer {
                     <span class="pdf-zoom-level">100%</span>
                     <button class="pdf-btn pdf-zoom-in" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom In</button>
                     <button class="pdf-btn pdf-fullscreen" data-viewer="<?php echo esc_attr($viewer_id); ?>">Fullscreen</button>
-                    <!-- Render shortcode (hidden modal) -->
-                <?php echo do_shortcode('[mpesa_download]'); ?>
-
-                <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                    const openBtn = document.getElementById('open-mpesa-modal');
-                    const modal = document.getElementById('mpesa-payment-modal');
-                    const closeBtn = modal.querySelector('.mpesa-close');
-                    const cancelBtn = modal.querySelector('.mpesa-cancel');
-
-                    // Open modal
-                    openBtn.addEventListener('click', () => {
-                    modal.style.display = 'block';
-                    });
-
-                    // Close modal
-                    closeBtn.addEventListener('click', () => {
-                        modal.style.display = 'none';
-                    });
-                    cancelBtn.addEventListener('click', () => {
-                        modal.style.display = 'none';
-                    });
-                    });
-                </script>
+                    <!-- FIXED: Simple download button that will trigger the global modal -->
+                    <button class="pdf-btn pdf-download" id="open-mpesa-modal" data-viewer="<?php echo esc_attr($viewer_id); ?>">Download PDF</button>
                 </div>
             </div>
             <div class="pdf-viewer-wrapper">
@@ -865,7 +1115,7 @@ class CleanPDFViewer {
         return ob_get_clean();
     }
 
-    // Enhanced Book Selector shortcode with auto-load
+    // FIXED: Enhanced Book Selector shortcode without inline modal
     public function book_selector_shortcode($atts) {
         $atts = shortcode_atts(array(
             'show_description' => 'true',
@@ -890,7 +1140,9 @@ class CleanPDFViewer {
                             <span class="book-icon">📖</span>
                         </div>
                         <h4><?php echo esc_html($book->title); ?></h4>
-                                                
+                        <?php if ($atts['show_description'] === 'true' && !empty($book->description)): ?>
+                            <p class="book-description"><?php echo esc_html(wp_trim_words($book->description, 15)); ?></p>
+                        <?php endif; ?>                        
                         <button class="read-book-btn <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'active' : ''; ?>" 
                                 data-book-id="<?php echo esc_attr($book->id); ?>"
                                 <?php echo $index === 0 ? 'data-auto-load="true"' : ''; ?>>
@@ -1061,32 +1313,8 @@ class CleanPDFViewer {
                     <span class="pdf-zoom-level">100%</span>
                     <button class="pdf-btn pdf-zoom-in" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom In</button>
                     <button class="pdf-btn pdf-fullscreen" data-viewer="<?php echo esc_attr($viewer_id); ?>">Fullscreen</button>
-
-                        <!-- Render shortcode (hidden modal) -->
-                <?php echo do_shortcode('[mpesa_download]'); ?>
-
-                <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                    const openBtn = document.getElementById('open-mpesa-modal');
-                    const modal = document.getElementById('mpesa-payment-modal');
-                    const closeBtn = modal.querySelector('.mpesa-close');
-                    const cancelBtn = modal.querySelector('.mpesa-cancel');
-
-                    // Open modal
-                    openBtn.addEventListener('click', () => {
-                    modal.style.display = 'block';
-                    });
-
-                    // Close modal
-                    closeBtn.addEventListener('click', () => {
-                        modal.style.display = 'none';
-                    });
-                    cancelBtn.addEventListener('click', () => {
-                        modal.style.display = 'none';
-                    });
-                    });
-                </script>
-
+                    <!-- FIXED: Single download button that triggers global modal -->
+                    <button class="pdf-btn pdf-download" id="open-mpesa-modal" data-viewer="<?php echo esc_attr($viewer_id); ?>">Download PDF</button>
                 </div>
             </div>
             <div class="pdf-viewer-wrapper">
@@ -1247,7 +1475,7 @@ class CleanPDFViewer {
                 'clean-pdf-viewer-css',
                 plugin_dir_url(__FILE__) . 'css/clean-pdf-viewer.css',
                 array(),
-                '2.0.1'
+                '2.0.2'
             );
         } else {
             // Inline CSS fallback
@@ -1261,7 +1489,7 @@ class CleanPDFViewer {
                 'clean-pdf-viewer-js',
                 plugin_dir_url(__FILE__) . 'js/clean-pdf-viewer.js',
                 array('jquery', 'pdfjs-dist'),
-                '2.0.1',
+                '2.0.2',
                 true
             );
         } else {
@@ -1299,6 +1527,8 @@ class CleanPDFViewer {
         .pdf-btn:hover{background:#2980b9;transform:translateY(-2px)}
         .pdf-btn:disabled{background:#7f8c8d;cursor:not-allowed;transform:none}
         .pdf-fullscreen{background:#9b59b6!important}
+        .pdf-download{background:#e67e22!important}
+        .pdf-download:hover{background:#d35400!important}
         .pdf-page-info,.pdf-zoom-level{color:white;font-weight:bold;font-size:14px;background:rgba(255,255,255,0.1);padding:8px 12px;border-radius:4px}
         .pdf-viewer-wrapper{background:white;overflow:auto;height:calc(100% - 70px);display:flex;justify-content:center;align-items:flex-start;padding:20px}
         .pdf-canvas{max-width:100%;box-shadow:0 4px 8px rgba(0,0,0,0.1);border-radius:4px}
@@ -1334,6 +1564,18 @@ class CleanPDFViewer {
                         // You would need to implement the full PDF viewer here
                     }
                 });
+            });
+            
+            // Basic download modal functionality
+            document.addEventListener("click",function(e){
+                if(e.target && e.target.id==="open-mpesa-modal"){
+                    e.preventDefault();
+                    var modal=document.getElementById("mpesa-payment-modal");
+                    if(modal){
+                        modal.style.display="block";
+                        document.body.style.overflow="hidden";
+                    }
+                }
             });
         });
         ';
