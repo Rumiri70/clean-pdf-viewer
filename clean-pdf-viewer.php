@@ -829,75 +829,85 @@ class CleanPDFViewer {
         return ob_get_clean();
     }
 
-    // Enhanced Book Selector shortcode with auto-load
-    public function book_selector_shortcode($atts) {
-        $atts = shortcode_atts(array(
-            'show_description' => 'true',
-            'auto_load_first' => 'true',
-            'columns' => 'auto'
-        ), $atts);
+    // Enhanced Book Selector shortcode that uses the main PDF viewer shortcode
+public function book_selector_shortcode($atts) {
+    $atts = shortcode_atts(array(
+        'show_description' => 'true',
+        'auto_load_first' => 'true',
+        'columns' => 'auto',
+        'width' => '100%',
+        'height' => '600px'
+    ), $atts);
 
-        $books = $this->get_active_books();
-        
-        if (empty($books)) {
-            return '<div class="no-books-message"><h3>No Books Available</h3><p>No PDF books are currently available. Please check back later.</p></div>';
-        }
-
-        ob_start();
-        ?>
-        <div class="pdf-book-selector">
-            <h3>Select a Book to Read</h3>
-            <div class="book-grid" style="<?php echo $atts['columns'] !== 'auto' ? 'grid-template-columns: repeat(' . intval($atts['columns']) . ', 1fr);' : ''; ?>">
-                <?php foreach ($books as $index => $book): ?>
-                    <div class="book-item <?php echo $index === 0 ? 'first-book' : ''; ?>">
-                        <div class="book-cover">
-                            <span class="book-icon">📖</span>
-                        </div>
-                        <h4><?php echo esc_html($book->title); ?></h4>
-                                                
-                        <button class="read-book-btn <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'active' : ''; ?>" 
-                                data-book-id="<?php echo esc_attr($book->id); ?>"
-                                <?php echo $index === 0 ? 'data-auto-load="true"' : ''; ?>>
-                            <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'Currently Reading' : 'Read Book'; ?>
-                        </button>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-            
-            <div id="pdf-viewer-container" role="main" aria-label="PDF Viewer">
-                <?php if ($atts['auto_load_first'] === 'true'): ?>
-                    <div class="pdf-viewer-loading">
-                        <div class="book-loading"></div>
-                        <p>Loading first book...</p>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <script type="application/ld+json">
-        {
-            "@context": "https://schema.org",
-            "@type": "ItemList",
-            "name": "PDF Book Collection",
-            "numberOfItems": <?php echo count($books); ?>,
-            "itemListElement": [
-                <?php foreach ($books as $index => $book): ?>
-                {
-                    "@type": "Book",
-                    "position": <?php echo $index + 1; ?>,
-                    "name": "<?php echo esc_js($book->title); ?>",
-                    "description": "<?php echo esc_js(wp_trim_words($book->description, 20)); ?>",
-                    "contentSize": "<?php echo esc_js($this->format_file_size($book->file_size)); ?>",
-                    "encodingFormat": "application/pdf"
-                }<?php echo $index < count($books) - 1 ? ',' : ''; ?>
-                <?php endforeach; ?>
-            ]
-        }
-        </script>
-
-        <?php
-        return ob_get_clean();
+    $books = $this->get_active_books();
+    
+    if (empty($books)) {
+        return '<div class="no-books-message"><h3>No Books Available</h3><p>No PDF books are currently available. Please check back later.</p></div>';
     }
+
+    ob_start();
+    ?>
+    <div class="pdf-book-selector">
+        <h3>Select a Book to Read</h3>
+        <div class="book-grid" style="<?php echo $atts['columns'] !== 'auto' ? 'grid-template-columns: repeat(' . intval($atts['columns']) . ', 1fr);' : ''; ?>">
+            <?php foreach ($books as $index => $book): ?>
+                <div class="book-item <?php echo $index === 0 ? 'first-book' : ''; ?>">
+                    <div class="book-cover">
+                        <span class="book-icon">📖</span>
+                    </div>
+                    <h4><?php echo esc_html($book->title); ?></h4>
+                    <?php if ($atts['show_description'] === 'true' && !empty($book->description)): ?>
+                        <p class="book-description"><?php echo esc_html(wp_trim_words($book->description, 15)); ?></p>
+                    <?php endif; ?>
+                    <p class="book-size"><?php echo esc_html($this->format_file_size($book->file_size)); ?></p>
+                    
+                    <button class="read-book-btn <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'active' : ''; ?>" 
+                            data-book-id="<?php echo esc_attr($book->id); ?>"
+                            data-width="<?php echo esc_attr($atts['width']); ?>"
+                            data-height="<?php echo esc_attr($atts['height']); ?>"
+                            <?php echo $index === 0 ? 'data-auto-load="true"' : ''; ?>>
+                        <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'Currently Reading' : 'Read Book'; ?>
+                    </button>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        
+        <div id="pdf-viewer-container" role="main" aria-label="PDF Viewer">
+            <?php if ($atts['auto_load_first'] === 'true'): ?>
+                <!-- Auto-load first book using the main shortcode -->
+                <?php echo do_shortcode('[clean_pdf_viewer book_id="' . $books[0]->id . '" width="' . esc_attr($atts['width']) . '" height="' . esc_attr($atts['height']) . '"]'); ?>
+            <?php else: ?>
+                <div class="pdf-viewer-placeholder">
+                    <p>Select a book above to start reading</p>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": "PDF Book Collection",
+        "numberOfItems": <?php echo count($books); ?>,
+        "itemListElement": [
+            <?php foreach ($books as $index => $book): ?>
+            {
+                "@type": "Book",
+                "position": <?php echo $index + 1; ?>,
+                "name": "<?php echo esc_js($book->title); ?>",
+                "description": "<?php echo esc_js(wp_trim_words($book->description, 20)); ?>",
+                "contentSize": "<?php echo esc_js($this->format_file_size($book->file_size)); ?>",
+                "encodingFormat": "application/pdf"
+            }<?php echo $index < count($books) - 1 ? ',' : ''; ?>
+            <?php endforeach; ?>
+        ]
+    }
+    </script>
+
+    <?php
+    return ob_get_clean();
+}
 
     // Enhanced serve_protected_pdf with better security and range support
     public function serve_protected_pdf() {
@@ -979,92 +989,143 @@ class CleanPDFViewer {
         }
     }
 
-    public function load_pdf_viewer() {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'load_pdf_nonce')) {
-            wp_send_json_error(array('message' => 'Security check failed.'));
-        }
-
-        $book_id = isset($_POST['book_id']) ? intval($_POST['book_id']) : 0;
-        if (!$book_id) {
-            wp_send_json_error(array('message' => 'Invalid book ID.'));
-        }
-
-        global $wpdb;
-
-        $book = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$this->table_name} WHERE id = %d AND status = 'active'",
-            $book_id
-        ));
-
-        if (!$book) {
-            wp_send_json_error(array('message' => 'Book not found or inactive.'));
-        }
-
-        // Create secure PDF URL
-        $pdf_url = add_query_arg(array(
-            'action' => 'serve_protected_pdf',
-            'book_id' => $book->id,
-            'nonce' => wp_create_nonce('serve_pdf_' . $book->id)
-        ), admin_url('admin-ajax.php'));
-
-        // Generate viewer HTML
-        $viewer_id = 'pdf-viewer-book-' . $book->id . '-' . time();
-        
-        ob_start();
-        ?>
-        <div class="clean-pdf-viewer-container" style="width: 100%; height: auto;">
-            <div class="pdf-controls">
-                <div class="pdf-controls-left">
-                    <button class="pdf-btn pdf-prev" data-viewer="<?php echo esc_attr($viewer_id); ?>">← Previous</button>
-                    <span class="pdf-page-info">Page <span class="pdf-current-page">1</span> of <span class="pdf-total-pages">-</span></span>
-                    <button class="pdf-btn pdf-next" data-viewer="<?php echo esc_attr($viewer_id); ?>">Next →</button>
-                </div>
-                <div class="pdf-controls-right">
-                    <button class="pdf-btn pdf-zoom-out" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom Out</button>
-                    <span class="pdf-zoom-level">100%</span>
-                    <button class="pdf-btn pdf-zoom-in" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom In</button>
-                    <button class="pdf-btn pdf-fullscreen" data-viewer="<?php echo esc_attr($viewer_id); ?>">Fullscreen</button>
-
-                        <!-- Render shortcode (hidden modal) 
-                   <php echo do_shortcode('[mpesa_download]'); ?> 
-
-                   <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                        const openBtn = document.getElementById('open-mpesa-modal');
-                        const modal = document.getElementById('mpesa-payment-modal');
-                        const closeBtn = modal.querySelector('.mpesa-close');
-                        const cancelBtn = modal.querySelector('.mpesa-cancel');
-
-                        // Open modal
-                        openBtn.addEventListener('click', () => {
-                        modal.style.display = 'block';
-                        });
-
-                        // Close modal
-                        closeBtn.addEventListener('click', () => {
-                            modal.style.display = 'none';
-                        });
-                        cancelBtn.addEventListener('click', () => {
-                            modal.style.display = 'none';
-                        });
-                        });
-                    </script> 
-                        -->
-                </div>
-            </div>
-            <div class="pdf-viewer-wrapper">
-                <canvas id="<?php echo esc_attr($viewer_id); ?>" class="pdf-canvas" data-pdf-url="<?php echo esc_attr($pdf_url); ?>"></canvas>
-            </div>
-            <div class="pdf-loading">Loading PDF...</div>
-            <div class="pdf-error" style="display: none;">Error loading PDF. Please try again.</div>
-            <div aria-live="polite" class="sr-only"></div>
-        </div>
-        <?php
-        $viewer_html = ob_get_clean();
-
-        wp_send_json_success(array('html' => $viewer_html));
+    // Simplified load_pdf_viewer method that returns shortcode HTML
+public function load_pdf_viewer() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'load_pdf_nonce')) {
+        wp_send_json_error(array('message' => 'Security check failed.'));
     }
+
+    $book_id = isset($_POST['book_id']) ? intval($_POST['book_id']) : 0;
+    $width = isset($_POST['width']) ? sanitize_text_field($_POST['width']) : '100%';
+    $height = isset($_POST['height']) ? sanitize_text_field($_POST['height']) : '600px';
+    
+    if (!$book_id) {
+        wp_send_json_error(array('message' => 'Invalid book ID.'));
+    }
+
+    // Verify book exists and is active
+    $book = $this->get_book_by_id($book_id);
+    if (!$book || $book->status !== 'active') {
+        wp_send_json_error(array('message' => 'Book not found or inactive.'));
+    }
+
+    // Generate the PDF viewer using the existing shortcode
+    $shortcode = '[clean_pdf_viewer book_id="' . $book_id . '" width="' . esc_attr($width) . '" height="' . esc_attr($height) . '"]';
+    $viewer_html = do_shortcode($shortcode);
+
+    wp_send_json_success(array(
+        'html' => $viewer_html,
+        'book_title' => $book->title,
+        'book_id' => $book->id
+    ));
+}   
+
+private function get_book_selector_js() {
+    return '
+    document.addEventListener("DOMContentLoaded", function() {
+        // Handle book selection
+        document.querySelectorAll(".read-book-btn").forEach(function(btn) {
+            btn.addEventListener("click", function(e) {
+                e.preventDefault();
+                
+                const bookId = this.dataset.bookId;
+                const width = this.dataset.width || "100%";
+                const height = this.dataset.height || "600px";
+                const container = document.getElementById("pdf-viewer-container");
+                
+                if (!container || !bookId) return;
+                
+                // Update button states
+                document.querySelectorAll(".read-book-btn").forEach(b => {
+                    b.classList.remove("active");
+                    b.textContent = "Read Book";
+                });
+                
+                this.classList.add("active");
+                this.textContent = "Currently Reading";
+                
+                // Show loading
+                container.innerHTML = `
+                    <div class="pdf-viewer-loading">
+                        <div class="book-loading"></div>
+                        <p>${cleanPdfAjax.strings.loading_book}</p>
+                    </div>
+                `;
+                
+                // Load new viewer via AJAX
+                fetch(cleanPdfAjax.ajax_url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    body: new URLSearchParams({
+                        action: "load_pdf_viewer",
+                        book_id: bookId,
+                        width: width,
+                        height: height,
+                        nonce: cleanPdfAjax.load_pdf_nonce
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        container.innerHTML = data.data.html;
+                        container.classList.add("loaded");
+                        
+                        // Announce to screen readers
+                        const announcement = document.querySelector(".sr-only");
+                        if (announcement) {
+                            announcement.textContent = `${cleanPdfAjax.strings.book_loaded}: ${data.data.book_title}`;
+                        }
+                        
+                        // Scroll to viewer
+                        container.scrollIntoView({ behavior: "smooth", block: "start" });
+                        
+                        // Re-initialize PDF viewer if needed
+                        if (typeof initializePdfViewer === "function") {
+                            initializePdfViewer();
+                        }
+                    } else {
+                        container.innerHTML = `
+                            <div class="pdf-error">
+                                <p>${cleanPdfAjax.strings.error_loading_book}: ${data.data.message}</p>
+                                <button onclick="location.reload()" class="pdf-btn">Try Again</button>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error("Error loading PDF viewer:", error);
+                    container.innerHTML = `
+                        <div class="pdf-error">
+                            <p>${cleanPdfAjax.strings.error_loading_book}</p>
+                            <button onclick="location.reload()" class="pdf-btn">Try Again</button>
+                        </div>
+                    `;
+                });
+            });
+        });
+        
+        // Auto-load first book if specified
+        const autoLoadBtn = document.querySelector(".read-book-btn[data-auto-load=\'true\']");
+        if (autoLoadBtn) {
+            const container = document.getElementById("pdf-viewer-container");
+            if (container) {
+                container.classList.add("loaded");
+                
+                // Announce to screen readers
+                setTimeout(() => {
+                    const announcement = document.querySelector(".sr-only");
+                    if (announcement) {
+                        announcement.textContent = `${cleanPdfAjax.strings.book_loaded}`;
+                    }
+                }, 1000);
+            }
+        }
+    });
+    ';
+}
 
     // Database helper methods
     private function get_all_books() {
@@ -1156,114 +1217,118 @@ class CleanPDFViewer {
         // Plugin initialization
     }
     
-    // Enhanced script enqueueing
-    public function enqueue_scripts() {
-        global $post;
-        
-        // Check if we need to load scripts
-        $load_scripts = false;
-        
-        if (is_a($post, 'WP_Post')) {
-            if (has_shortcode($post->post_content, 'clean_pdf_viewer') || 
-                has_shortcode($post->post_content, 'pdf_book_selector')) {
-                $load_scripts = true;
-            }
+    // Updated enqueue_scripts method to include book selector JS
+public function enqueue_scripts() {
+    global $post;
+    
+    // Check if we need to load scripts
+    $load_scripts = false;
+    
+    if (is_a($post, 'WP_Post')) {
+        if (has_shortcode($post->post_content, 'clean_pdf_viewer') || 
+            has_shortcode($post->post_content, 'pdf_book_selector')) {
+            $load_scripts = true;
         }
-        
-        // Also check for shortcodes in widgets or other content areas
-        if (!$load_scripts && is_active_widget(false, false, 'text')) {
-            $load_scripts = true; // Load if text widgets are active (might contain shortcodes)
-        }
-        
-        if (!$load_scripts) {
-            return;
-        }
-        
-        // Load PDF.js
-        wp_enqueue_script(
-            'pdfjs-dist',
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+    }
+    
+    // Also check for shortcodes in widgets or other content areas
+    if (!$load_scripts && is_active_widget(false, false, 'text')) {
+        $load_scripts = true;
+    }
+    
+    if (!$load_scripts) {
+        return;
+    }
+    
+    // Load PDF.js
+    wp_enqueue_script(
+        'pdfjs-dist',
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+        array(),
+        '3.11.174',
+        true
+    );
+    
+    // Load plugin styles
+    $css_path = plugin_dir_path(__FILE__) . 'css/clean-pdf-viewer.css';
+    if (file_exists($css_path)) {
+        wp_enqueue_style(
+            'clean-pdf-viewer-css',
+            plugin_dir_url(__FILE__) . 'css/clean-pdf-viewer.css',
             array(),
-            '3.11.174',
+            '2.0.1'
+        );
+    } else {
+        wp_add_inline_style('wp-block-library', $this->get_inline_css());
+    }
+    
+    // Load plugin JavaScript
+    $js_path = plugin_dir_path(__FILE__) . 'js/clean-pdf-viewer.js';
+    if (file_exists($js_path)) {
+        wp_enqueue_script(
+            'clean-pdf-viewer-js',
+            plugin_dir_url(__FILE__) . 'js/clean-pdf-viewer.js',
+            array('jquery', 'pdfjs-dist'),
+            '2.0.1',
             true
         );
-        
-        // Load plugin styles - check if file exists, fallback to inline
-        $css_path = plugin_dir_path(__FILE__) . 'css/clean-pdf-viewer.css';
-        if (file_exists($css_path)) {
-            wp_enqueue_style(
-                'clean-pdf-viewer-css',
-                plugin_dir_url(__FILE__) . 'css/clean-pdf-viewer.css',
-                array(),
-                '2.0.1'
-            );
-        } else {
-            // Inline CSS fallback
-            wp_add_inline_style('wp-block-library', $this->get_inline_css());
-        }
-        
-        // Load plugin JavaScript - check if file exists, fallback to inline
-        $js_path = plugin_dir_path(__FILE__) . 'js/clean-pdf-viewer.js';
-        if (file_exists($js_path)) {
-            wp_enqueue_script(
-                'clean-pdf-viewer-js',
-                plugin_dir_url(__FILE__) . 'js/clean-pdf-viewer.js',
-                array('jquery', 'pdfjs-dist'),
-                '2.0.1',
-                true
-            );
-        } else {
-            // Inline JS fallback
-            wp_add_inline_script('pdfjs-dist', $this->get_inline_js());
-        }
-        
-        // Localize script with enhanced data
-        wp_localize_script('pdfjs-dist', 'cleanPdfAjax', array(
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('clean_pdf_nonce'),
-            'load_pdf_nonce' => wp_create_nonce('load_pdf_nonce'),
-            'plugin_url' => plugin_dir_url(__FILE__),
-            'strings' => array(
-                'loading' => __('Loading PDF...', 'clean-pdf-viewer'),
-                'error' => __('Error loading PDF. Please try again.', 'clean-pdf-viewer'),
-                'page' => __('Page', 'clean-pdf-viewer'),
-                'of' => __('of', 'clean-pdf-viewer'),
-                'fullscreen' => __('Fullscreen', 'clean-pdf-viewer'),
-                'exit_fullscreen' => __('Exit Fullscreen', 'clean-pdf-viewer'),
-                'loading_book' => __('Loading book...', 'clean-pdf-viewer'),
-                'book_loaded' => __('Book loaded successfully', 'clean-pdf-viewer'),
-                'error_loading_book' => __('Error loading book', 'clean-pdf-viewer')
-            )
-        ));
+    } else {
+        // Inline JS fallback with book selector functionality
+        wp_add_inline_script('pdfjs-dist', $this->get_inline_js() . $this->get_book_selector_js());
     }
-
-    // Inline CSS fallback
-    private function get_inline_css() {
-        return '
-        .clean-pdf-viewer-container{border:1px solid #ddd;border-radius:12px;overflow:hidden;background:#f9f9f9;position:relative;box-shadow:0 5px 15px rgba(0,0,0,0.08)}
-        .pdf-controls{background:linear-gradient(135deg,#2c3e50,#34495e);padding:15px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
-        .pdf-controls-left,.pdf-controls-right{display:flex;align-items:center;gap:15px;flex-wrap:wrap}
-        .pdf-btn{background:#3498db;color:white;border:none;padding:12px 20px;font-size:16px;font-weight:bold;border-radius:6px;cursor:pointer;transition:all 0.3s ease;min-width:120px}
-        .pdf-btn:hover{background:#2980b9;transform:translateY(-2px)}
-        .pdf-btn:disabled{background:#7f8c8d;cursor:not-allowed;transform:none}
-        .pdf-fullscreen{background:#9b59b6!important}
-        .pdf-page-info,.pdf-zoom-level{color:white;font-weight:bold;font-size:14px;background:rgba(255,255,255,0.1);padding:8px 12px;border-radius:4px}
-        .pdf-viewer-wrapper{background:white;overflow:auto;height:calc(100% - 70px);display:flex;justify-content:center;align-items:flex-start;padding:20px}
-        .pdf-canvas{max-width:100%;box-shadow:0 4px 8px rgba(0,0,0,0.1);border-radius:4px}
-        .pdf-loading,.pdf-error{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);padding:20px 30px;border-radius:8px;color:white;font-weight:bold}
-        .pdf-loading{background:rgba(0,0,0,0.8)}
-        .pdf-error{background:#e74c3c}
-        .pdf-book-selector{max-width:1200px;margin:0 auto;padding:20px}
-        .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:25px;margin:20px 0}
-        .book-item{border:1px solid #e1e8ed;border-radius:12px;padding:25px;text-align:center;transition:all 0.3s ease;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
-        .book-item:hover{transform:translateY(-8px);box-shadow:0 8px 25px rgba(0,0,0,0.15)}
-        .read-book-btn{background:linear-gradient(135deg,#3498db,#2980b9);color:white;border:none;padding:12px 24px;border-radius:25px;cursor:pointer;font-weight:600;transition:all 0.3s ease}
-        .read-book-btn.active{background:linear-gradient(135deg,#27ae60,#219a52);box-shadow:0 4px 15px rgba(39,174,96,0.4)}
-        #pdf-viewer-container{margin-top:40px;opacity:0;transition:all 0.5s ease}
-        #pdf-viewer-container.loaded{opacity:1}
-        @media (max-width:768px){.pdf-controls{flex-direction:column}.book-grid{grid-template-columns:1fr}}
-        ';
-    }
+    
+    // Localize script
+    wp_localize_script('pdfjs-dist', 'cleanPdfAjax', array(
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('clean_pdf_nonce'),
+        'load_pdf_nonce' => wp_create_nonce('load_pdf_nonce'),
+        'plugin_url' => plugin_dir_url(__FILE__),
+        'strings' => array(
+            'loading' => __('Loading PDF...', 'clean-pdf-viewer'),
+            'error' => __('Error loading PDF. Please try again.', 'clean-pdf-viewer'),
+            'page' => __('Page', 'clean-pdf-viewer'),
+            'of' => __('of', 'clean-pdf-viewer'),
+            'fullscreen' => __('Fullscreen', 'clean-pdf-viewer'),
+            'exit_fullscreen' => __('Exit Fullscreen', 'clean-pdf-viewer'),
+            'loading_book' => __('Loading book...', 'clean-pdf-viewer'),
+            'book_loaded' => __('Book loaded successfully', 'clean-pdf-viewer'),
+            'error_loading_book' => __('Error loading book', 'clean-pdf-viewer')
+        )
+    ));
+}
+   private function get_inline_css() {
+    return '
+    .clean-pdf-viewer-container{border:1px solid #ddd;border-radius:12px;overflow:hidden;background:#f9f9f9;position:relative;box-shadow:0 5px 15px rgba(0,0,0,0.08)}
+    .pdf-controls{background:linear-gradient(135deg,#2c3e50,#34495e);padding:15px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+    .pdf-controls-left,.pdf-controls-right{display:flex;align-items:center;gap:15px;flex-wrap:wrap}
+    .pdf-btn{background:#3498db;color:white;border:none;padding:12px 20px;font-size:16px;font-weight:bold;border-radius:6px;cursor:pointer;transition:all 0.3s ease;min-width:120px}
+    .pdf-btn:hover{background:#2980b9;transform:translateY(-2px)}
+    .pdf-btn:disabled{background:#7f8c8d;cursor:not-allowed;transform:none}
+    .pdf-fullscreen{background:#9b59b6!important}
+    .pdf-page-info,.pdf-zoom-level{color:white;font-weight:bold;font-size:14px;background:rgba(255,255,255,0.1);padding:8px 12px;border-radius:4px}
+    .pdf-viewer-wrapper{background:white;overflow:auto;height:calc(100% - 70px);display:flex;justify-content:center;align-items:flex-start;padding:20px}
+    .pdf-canvas{max-width:100%;box-shadow:0 4px 8px rgba(0,0,0,0.1);border-radius:4px}
+    .pdf-loading,.pdf-error{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);padding:20px 30px;border-radius:8px;color:white;font-weight:bold}
+    .pdf-loading{background:rgba(0,0,0,0.8)}
+    .pdf-error{background:#e74c3c}
+    .pdf-book-selector{max-width:1200px;margin:0 auto;padding:20px}
+    .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:25px;margin:20px 0}
+    .book-item{border:1px solid #e1e8ed;border-radius:12px;padding:25px;text-align:center;transition:all 0.3s ease;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+    .book-item:hover{transform:translateY(-8px);box-shadow:0 8px 25px rgba(0,0,0,0.15)}
+    .book-description{color:#666;font-size:14px;margin:10px 0}
+    .book-size{color:#999;font-size:12px;font-weight:bold}
+    .read-book-btn{background:linear-gradient(135deg,#3498db,#2980b9);color:white;border:none;padding:12px 24px;border-radius:25px;cursor:pointer;font-weight:600;transition:all 0.3s ease;margin-top:15px}
+    .read-book-btn.active{background:linear-gradient(135deg,#27ae60,#219a52);box-shadow:0 4px 15px rgba(39,174,96,0.4)}
+    .read-book-btn:hover{transform:translateY(-2px)}
+    #pdf-viewer-container{margin-top:40px;opacity:0;transition:all 0.5s ease}
+    #pdf-viewer-container.loaded{opacity:1}
+    .pdf-viewer-placeholder{text-align:center;padding:60px 20px;color:#666;border:2px dashed #ddd;border-radius:12px;background:#f9f9f9}
+    .pdf-viewer-loading{text-align:center;padding:40px;color:#666}
+    .book-loading{width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid #3498db;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px}
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    @media (max-width:768px){.pdf-controls{flex-direction:column}.book-grid{grid-template-columns:1fr}}
+    ';
+}
 
     // Inline JS fallback (basic functionality)
     private function get_inline_js() {
