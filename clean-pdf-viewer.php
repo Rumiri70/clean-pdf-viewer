@@ -839,8 +839,8 @@ class CleanPDFViewer {
                                 <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'Currently Reading' : 'Read Book'; ?>
                             </button>
                             
-                            <button class="download-book-btn" data-book-id="<?php echo esc_attr($book->id); ?>">
-                                Download PDF
+                            <button class="mpesa-download-button" data-book-id="<?php echo esc_attr($book->id); ?>">
+                                Download
                             </button>
                         </div>
                     </div>
