@@ -860,7 +860,7 @@ class CleanPDFViewer {
         </div>
 
         <!-- Render M-Pesa modal once for all books -->
-        
+        <?php echo do_shortcode('[mpesa_download]'); ?>
 
         <script type="application/ld+json">
         {
