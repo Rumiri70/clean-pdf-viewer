@@ -793,29 +793,7 @@ class CleanPDFViewer {
                     <button class="pdf-btn pdf-zoom-in" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom In</button>
                     <button class="pdf-btn pdf-fullscreen" data-viewer="<?php echo esc_attr($viewer_id); ?>">Fullscreen</button>
                     <!-- Render shortcode (hidden modal) -->
-                <?php echo do_shortcode('[mpesa_download]'); ?>
-
-                <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                    const openBtn = document.getElementById('open-mpesa-modal');
-                    const modal = document.getElementById('mpesa-payment-modal');
-                    const closeBtn = modal.querySelector('.mpesa-close');
-                    const cancelBtn = modal.querySelector('.mpesa-cancel');
-
-                    // Open modal
-                    openBtn.addEventListener('click', () => {
-                    modal.style.display = 'block';
-                    });
-
-                    // Close modal
-                    closeBtn.addEventListener('click', () => {
-                        modal.style.display = 'none';
-                    });
-                    cancelBtn.addEventListener('click', () => {
-                        modal.style.display = 'none';
-                    });
-                    });
-                </script>
+                
                 </div>
             </div>
             <div class="pdf-viewer-wrapper">
@@ -857,10 +835,29 @@ public function book_selector_shortcode($atts) {
                     </div>
                     <h4><?php echo esc_html($book->title); ?></h4>
                     <?php if ($atts['show_description'] === 'true' && !empty($book->description)): ?>
-                        <p class="book-description"><?php echo esc_html(wp_trim_words($book->description, 15)); ?></p>
-                    <?php endif; ?>
-                    <p class="book-size"><?php echo esc_html($this->format_file_size($book->file_size)); ?></p>
-                    
+                        <div><?php echo do_shortcode('[mpesa_download]'); ?>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                    const openBtn = document.getElementById('open-mpesa-modal');
+                    const modal = document.getElementById('mpesa-payment-modal');
+                    const closeBtn = modal.querySelector('.mpesa-close');
+                    const cancelBtn = modal.querySelector('.mpesa-cancel');
+
+                    // Open modal
+                    openBtn.addEventListener('click', () => {
+                    modal.style.display = 'block';
+                    });
+
+                    // Close modal
+                    closeBtn.addEventListener('click', () => {
+                        modal.style.display = 'none';
+                    });
+                    cancelBtn.addEventListener('click', () => {
+                        modal.style.display = 'none';
+                    });
+                    });
+                </script></div>
                     <button class="read-book-btn <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'active' : ''; ?>" 
                             data-book-id="<?php echo esc_attr($book->id); ?>"
                             data-width="<?php echo esc_attr($atts['width']); ?>"
