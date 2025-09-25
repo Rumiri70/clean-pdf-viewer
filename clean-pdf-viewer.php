@@ -1026,8 +1026,31 @@ class CleanPDFViewer {
                     <button class="pdf-btn pdf-zoom-in" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom In</button>
                     <button class="pdf-btn pdf-fullscreen" data-viewer="<?php echo esc_attr($viewer_id); ?>">Fullscreen</button>
 
-                        <!-- Render shortcode (hidden modal) -->
-                <?php echo do_shortcode('[mpesa_download]'); ?>
+                        <!-- Render shortcode (hidden modal) 
+                   <php echo do_shortcode('[mpesa_download]'); ?> 
+
+                   <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                        const openBtn = document.getElementById('open-mpesa-modal');
+                        const modal = document.getElementById('mpesa-payment-modal');
+                        const closeBtn = modal.querySelector('.mpesa-close');
+                        const cancelBtn = modal.querySelector('.mpesa-cancel');
+
+                        // Open modal
+                        openBtn.addEventListener('click', () => {
+                        modal.style.display = 'block';
+                        });
+
+                        // Close modal
+                        closeBtn.addEventListener('click', () => {
+                            modal.style.display = 'none';
+                        });
+                        cancelBtn.addEventListener('click', () => {
+                            modal.style.display = 'none';
+                        });
+                        });
+                    </script> 
+                        -->
                 </div>
             </div>
             <div class="pdf-viewer-wrapper">
