@@ -72,23 +72,20 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 this.showLoading();
                 
-                // Check if PDF.js is loaded
                 if (typeof pdfjsLib === 'undefined') {
                     throw new Error('PDF.js library not loaded');
                 }
 
-                // Enable progressive loading with chunks
                 const loadingTask = pdfjsLib.getDocument({
                     url: this.pdfUrl,
                     withCredentials: true,
-                    rangeChunkSize: 65536, // 64KB chunks
-                    maxImageSize: 1024 * 1024, // Limit image size
+                    rangeChunkSize: 65536,
+                    maxImageSize: 1024 * 1024,
                     cMapPacked: true,
                     disableAutoFetch: false,
                     disableStream: false
                 });
 
-                // Add loading progress handler
                 loadingTask.onProgress = (progress) => {
                     const percent = (progress.loaded / progress.total * 100).toFixed(1);
                     this.updateLoadingProgress(percent);
@@ -96,15 +93,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 this.pdfDoc = await loadingTask.promise;
                 this.hideLoading();
+                
+                // Update total pages immediately after loading
                 this.updatePageInfo();
 
-                // Load first page immediately at lower quality
                 await this.renderPageProgressive(this.pageNum, 0.8);
-                
-                // Start preloading next few pages
                 this.preloadNextPages(this.pageNum);
-                
                 this.bindEvents();
+                
+                // Hide progress container after loading
+                if (this.progressContainer) {
+                    this.progressContainer.style.display = 'none';
+                }
+                
                 this.container.classList.add('loaded');
 
             } catch (error) {
@@ -250,6 +251,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (this.pageRendering) {
                 this.pageNumPending = num;
             } else {
+                // Update page number before rendering
+                this.pageNum = num;
+                
                 // Check cache first
                 if (this.pageCache.has(num)) {
                     const page = this.pageCache.get(num);
@@ -257,6 +261,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     await this.renderPageProgressive(num);
                 }
+                
+                // Update UI after page change
+                this.updateControls();
+                this.updatePageInfo();
+                this.announcePageChange();
                 
                 // Preload next pages
                 this.preloadNextPages(num);
@@ -316,10 +325,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const prevBtn = this.container.querySelector('.pdf-prev');
             const nextBtn = this.container.querySelector('.pdf-next');
             const currentPageSpan = this.container.querySelector('.pdf-current-page');
+            const totalPagesSpan = this.container.querySelector('.pdf-total-pages');
 
             if (prevBtn) prevBtn.disabled = (this.pageNum <= 1);
             if (nextBtn) nextBtn.disabled = (this.pageNum >= this.pdfDoc.numPages);
             if (currentPageSpan) currentPageSpan.textContent = this.pageNum;
+            if (totalPagesSpan) totalPagesSpan.textContent = this.pdfDoc.numPages;
         }
 
         updatePageInfo() {
@@ -362,6 +373,11 @@ document.addEventListener('DOMContentLoaded', function() {
         hideLoading() {
             const loadingEl = this.container.querySelector('.pdf-loading');
             if (loadingEl) loadingEl.style.display = 'none';
+            
+            // Also hide the progress container
+            if (this.progressContainer) {
+                this.progressContainer.style.display = 'none';
+            }
         }
 
         showError(error) {
