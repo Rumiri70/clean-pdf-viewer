@@ -749,7 +749,7 @@ class CleanPDFViewer {
             'pdf' => '',
             'book_id' => '',
             'width' => '100%',
-            'height' => '600px'
+            //'height' => '600px'
         ), $atts);
 
         // Handle book_id parameter
@@ -811,7 +811,7 @@ class CleanPDFViewer {
             'auto_load_first' => 'true',
             'columns' => 'auto',
             'width' => '100%',
-            'height' => '600px'
+            //'height' => '600px'
         ), $atts);
 
         $books = $this->get_active_books();
@@ -1025,7 +1025,7 @@ class CleanPDFViewer {
 
         $book_id = isset($_POST['book_id']) ? intval($_POST['book_id']) : 0;
         $width = isset($_POST['width']) ? sanitize_text_field($_POST['width']) : '100%';
-        $height = isset($_POST['height']) ? sanitize_text_field($_POST['height']) : '600px';
+        $height = isset($_POST['height']) ? sanitize_text_field($_POST['height']) : 'auto';
         
         if (!$book_id) {
             wp_send_json_error(array('message' => 'Invalid book ID.'));
@@ -1058,7 +1058,7 @@ class CleanPDFViewer {
                     
                     const bookId = this.dataset.bookId;
                     const width = this.dataset.width || "100%";
-                    const height = this.dataset.height || "600px";
+                    const height = this.dataset.height || "auto";
                     const container = document.getElementById("pdf-viewer-container");
                     
                     if (!container || !bookId) return;
