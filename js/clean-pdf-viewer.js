@@ -383,7 +383,101 @@ document.addEventListener('DOMContentLoaded', function() {
             errorDiv.textContent = errorMessage;
         }
 
+        bindEvents() {
+            // Navigation buttons
+            this.addEventListenerWithCleanup(
+                this.container.querySelector('.pdf-prev'),
+                'click',
+                () => this.prevPage()
+            );
+            
+            this.addEventListenerWithCleanup(
+                this.container.querySelector('.pdf-next'),
+                'click',
+                () => this.nextPage()
+            );
 
+            // Zoom buttons
+            this.addEventListenerWithCleanup(
+                this.container.querySelector('.pdf-zoom-in'),
+                'click',
+                () => this.zoomIn()
+            );
+            
+            this.addEventListenerWithCleanup(
+                this.container.querySelector('.pdf-zoom-out'),
+                'click',
+                () => this.zoomOut()
+            );
+
+            // Fullscreen button
+            this.addEventListenerWithCleanup(
+                this.container.querySelector('.pdf-fullscreen'),
+                'click',
+                () => this.toggleFullscreen()
+            );
+
+            // Keyboard navigation
+            this.addEventListenerWithCleanup(
+                document,
+                'keydown',
+                (e) => {
+                    if (!this.container.contains(document.activeElement)) return;
+                    
+                    switch(e.key) {
+                        case 'ArrowLeft':
+                            this.prevPage();
+                            break;
+                        case 'ArrowRight':
+                            this.nextPage();
+                            break;
+                        case '+':
+                            this.zoomIn();
+                            break;
+                        case '-':
+                            this.zoomOut();
+                            break;
+                    }
+                }
+            );
+
+            // Fullscreen change event
+            this.addEventListenerWithCleanup(
+                document,
+                'fullscreenchange',
+                () => {
+                    if (!document.fullscreenElement) {
+                        this.exitFullscreen();
+                    }
+                }
+            );
+        }
+
+        handleLoadError(error) {
+            if (this.retryCount < this.maxRetries) {
+                this.retryCount++;
+                console.log(`Retrying PDF load (attempt ${this.retryCount} of ${this.maxRetries})...`);
+                setTimeout(() => this.init(), 1000 * this.retryCount);
+            } else {
+                this.showError(error);
+                console.error('Max retries reached. PDF load failed:', error);
+                
+                // Create retry button
+                const retryButton = document.createElement('button');
+                retryButton.className = 'retry-btn';
+                retryButton.textContent = 'Try Again';
+                retryButton.onclick = () => {
+                    this.retryCount = 0;
+                    this.init();
+                };
+                
+                // Add retry button to error display
+                const errorDiv = this.container.querySelector('.pdf-error');
+                if (errorDiv) {
+                    errorDiv.appendChild(retryButton);
+                }
+            }
+        }
     }    
     // Fixed Book Selector functionality
     class PDFBookSelector {
