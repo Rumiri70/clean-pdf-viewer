@@ -21,6 +21,17 @@ document.addEventListener('DOMContentLoaded', function() {
             this.maxRetries = 3;
             this.eventListeners = [];
             
+            this.pageCache = new Map(); // Cache for rendered pages
+            this.preloadedPages = new Set(); // Track preloaded pages
+            this.maxCacheSize = 10; // Maximum number of pages to keep in cache
+            this.isProgressive = true; // Enable progressive loading
+            this.renderQuality = 1.5; // Initial render quality (can be adjusted)
+            
+            // Add loading progress elements
+            this.progressContainer = document.createElement('div');
+            this.progressContainer.className = 'pdf-loading-progress';
+            this.container.appendChild(this.progressContainer);
+            
             this.init();
         }
 
@@ -65,191 +76,147 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (typeof pdfjsLib === 'undefined') {
                     throw new Error('PDF.js library not loaded');
                 }
-                
+
+                // Enable progressive loading with chunks
                 const loadingTask = pdfjsLib.getDocument({
                     url: this.pdfUrl,
-                    withCredentials: true, // Changed to true for protected PDFs
-                    verbosity: 0
+                    withCredentials: true,
+                    rangeChunkSize: 65536, // 64KB chunks
+                    maxImageSize: 1024 * 1024, // Limit image size
+                    cMapPacked: true,
+                    disableAutoFetch: false,
+                    disableStream: false
                 });
-                
+
+                // Add loading progress handler
+                loadingTask.onProgress = (progress) => {
+                    const percent = (progress.loaded / progress.total * 100).toFixed(1);
+                    this.updateLoadingProgress(percent);
+                };
+
                 this.pdfDoc = await loadingTask.promise;
                 this.hideLoading();
                 this.updatePageInfo();
-                await this.renderPage(this.pageNum);
+
+                // Load first page immediately at lower quality
+                await this.renderPageProgressive(this.pageNum, 0.8);
+                
+                // Start preloading next few pages
+                this.preloadNextPages(this.pageNum);
+                
                 this.bindEvents();
-                
-                // Mark container as loaded
                 this.container.classList.add('loaded');
-                
+
             } catch (error) {
                 console.error('Error loading PDF:', error);
                 this.handleLoadError(error);
             }
         }
 
-        handleLoadError(error) {
-            if (this.retryCount < this.maxRetries) {
-                this.retryCount++;
-                console.log(`Retrying PDF load (attempt ${this.retryCount}/${this.maxRetries})`);
-                setTimeout(() => {
-                    this.init();
-                }, 1000 * this.retryCount);
-            } else {
-                this.showError(error);
-            }
+        updateLoadingProgress(percent) {
+            this.progressContainer.innerHTML = `
+                <div class="progress-bar">
+                    <div class="progress" style="width: ${percent}%"></div>
+                </div>
+                <div class="progress-text">Loading PDF: ${percent}%</div>
+            `;
         }
 
-        bindEvents() {
-            // Previous page
-            const prevBtn = this.container.querySelector(`[data-viewer="${this.viewerId}"].pdf-prev`);
-            if (prevBtn) {
-                this.addEventListenerWithCleanup(prevBtn, 'click', () => this.prevPage());
-            }
-
-            // Next page  
-            const nextBtn = this.container.querySelector(`[data-viewer="${this.viewerId}"].pdf-next`);
-            if (nextBtn) {
-                this.addEventListenerWithCleanup(nextBtn, 'click', () => this.nextPage());
-            }
-
-            // Zoom in
-            const zoomInBtn = this.container.querySelector(`[data-viewer="${this.viewerId}"].pdf-zoom-in`);
-            if (zoomInBtn) {
-                this.addEventListenerWithCleanup(zoomInBtn, 'click', () => this.zoomIn());
-            }
-
-            // Zoom out
-            const zoomOutBtn = this.container.querySelector(`[data-viewer="${this.viewerId}"].pdf-zoom-out`);
-            if (zoomOutBtn) {
-                this.addEventListenerWithCleanup(zoomOutBtn, 'click', () => this.zoomOut());
-            }
-
-            // Fullscreen toggle
-            const fullscreenBtn = this.container.querySelector(`[data-viewer="${this.viewerId}"].pdf-fullscreen`);
-            if (fullscreenBtn) {
-                this.addEventListenerWithCleanup(fullscreenBtn, 'click', () => this.toggleFullscreen());
-            }
-
-             // Download
-            //this.container.querySelector(`[data-viewer="${this.viewerId}"].pdf//-download`).addEventListener('click', (e) => {
-               // this.downloadPdf(e.target.dataset.url);
-           // });
-
-            // Touch/swipe support
-            this.addTouchSupport();
-            
-            // Keyboard navigation
-            this.addKeyboardSupport();
-        }
-
-        addKeyboardSupport() {
-            const keyHandler = (e) => {
-                if (!this.isFullscreen && !this.container.classList.contains('keyboard-focus')) return;
-                
-                switch(e.key) {
-                    case 'ArrowLeft':
-                    case 'PageUp':
-                        e.preventDefault();
-                        this.prevPage();
-                        break;
-                    case 'ArrowRight':
-                    case 'PageDown':
-                        e.preventDefault();
-                        this.nextPage();
-                        break;
-                    case 'Escape':
-                        e.preventDefault();
-                        if (this.isFullscreen) {
-                            this.toggleFullscreen();
-                        }
-                        break;
-                }
-            };
-            
-            this.addEventListenerWithCleanup(document, 'keydown', keyHandler);
-        }
-
-        addTouchSupport() {
-            let startX = 0;
-            let startY = 0;
-            const minSwipeDistance = 50;
-
-            const touchStartHandler = (e) => {
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-            };
-
-            const touchEndHandler = (e) => {
-                if (!startX || !startY) return;
-
-                const endX = e.changedTouches[0].clientX;
-                const endY = e.changedTouches[0].clientY;
-                const diffX = startX - endX;
-                const diffY = startY - endY;
-
-                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > minSwipeDistance) {
-                    if (diffX > 0) {
-                        this.nextPage();
-                    } else {
-                        this.prevPage();
-                    }
-                }
-
-                startX = 0;
-                startY = 0;
-            };
-
-            this.addEventListenerWithCleanup(this.canvas, 'touchstart', touchStartHandler, { passive: true });
-            this.addEventListenerWithCleanup(this.canvas, 'touchend', touchEndHandler, { passive: true });
-        }
-
-        async renderPage(num) {
+        async renderPageProgressive(num, initialQuality = 0.8) {
             if (this.pageRendering) {
                 this.pageNumPending = num;
                 return;
             }
 
             this.pageRendering = true;
-            
+
             try {
                 const page = await this.pdfDoc.getPage(num);
-                const viewport = page.getViewport({ scale: this.scale });
                 
-                const devicePixelRatio = window.devicePixelRatio || 1;
-                const scaledViewport = page.getViewport({ scale: this.scale * devicePixelRatio });
-                
-                this.canvas.width = scaledViewport.width;
-                this.canvas.height = scaledViewport.height;
-                this.canvas.style.width = viewport.width + 'px';
-                this.canvas.style.height = viewport.height + 'px';
-                
-                this.ctx.scale(devicePixelRatio, devicePixelRatio);
+                // First render at lower quality for quick display
+                if (this.isProgressive) {
+                    await this.renderPageAtQuality(page, initialQuality);
+                    
+                    // Then render at full quality
+                    if (!this.pageNumPending) {
+                        await this.renderPageAtQuality(page, this.renderQuality);
+                    }
+                } else {
+                    await this.renderPageAtQuality(page, this.renderQuality);
+                }
 
-                const renderContext = {
-                    canvasContext: this.ctx,
-                    viewport: viewport
-                };
-
-                this.renderTask = page.render(renderContext);
-                await this.renderTask.promise;
-                
                 this.pageRendering = false;
 
                 if (this.pageNumPending !== null) {
                     const pending = this.pageNumPending;
                     this.pageNumPending = null;
-                    this.renderPage(pending);
+                    this.renderPageProgressive(pending);
                 }
 
                 this.updateControls();
                 this.updateZoomLevel();
                 this.announcePageChange();
-                
+
+                // Cache the rendered page
+                this.cachePageRendering(num, page);
+
             } catch (error) {
                 console.error('Error rendering page:', error);
                 this.pageRendering = false;
                 this.showError(error);
             }
+        }
+
+        async renderPageAtQuality(page, quality) {
+            const viewport = page.getViewport({ scale: this.scale * quality });
+            
+            // Adjust canvas size for device pixel ratio
+            const pixelRatio = window.devicePixelRatio || 1;
+            const scaledViewport = page.getViewport({ scale: this.scale * quality * pixelRatio });
+            
+            this.canvas.width = scaledViewport.width;
+            this.canvas.height = scaledViewport.height;
+            this.canvas.style.width = viewport.width + 'px';
+            this.canvas.style.height = viewport.height + 'px';
+            
+            this.ctx.scale(pixelRatio, pixelRatio);
+
+            const renderContext = {
+                canvasContext: this.ctx,
+                viewport: viewport,
+                renderInteractiveForms: false, // Disable for better performance
+                enableWebGL: true, // Enable WebGL rendering if available
+            };
+
+            const renderTask = page.render(renderContext);
+            return renderTask.promise;
+        }
+
+        async preloadNextPages(currentPage) {
+            const pagesToPreload = 2; // Number of pages to preload
+            
+            for (let i = 1; i <= pagesToPreload; i++) {
+                const pageNum = currentPage + i;
+                if (pageNum <= this.pdfDoc.numPages && !this.preloadedPages.has(pageNum)) {
+                    try {
+                        const page = await this.pdfDoc.getPage(pageNum);
+                        this.preloadedPages.add(pageNum);
+                        // Store in cache
+                        this.cachePageRendering(pageNum, page);
+                    } catch (error) {
+                        console.warn(`Failed to preload page ${pageNum}:`, error);
+                    }
+                }
+            }
+        }
+
+        cachePageRendering(pageNum, page) {
+            // Implement LRU cache
+            if (this.pageCache.size >= this.maxCacheSize) {
+                const firstKey = this.pageCache.keys().next().value;
+                this.pageCache.delete(firstKey);
+            }
+            this.pageCache.set(pageNum, page);
         }
 
         // Navigation methods
@@ -277,13 +244,22 @@ document.addEventListener('DOMContentLoaded', function() {
             this.queueRenderPage(this.pageNum);
         }
 
-        queueRenderPage(num) {
+        async queueRenderPage(num) {
             if (num < 1 || num > this.pdfDoc.numPages) return;
             
             if (this.pageRendering) {
                 this.pageNumPending = num;
             } else {
-                this.renderPage(num);
+                // Check cache first
+                if (this.pageCache.has(num)) {
+                    const page = this.pageCache.get(num);
+                    await this.renderPageAtQuality(page, this.renderQuality);
+                } else {
+                    await this.renderPageProgressive(num);
+                }
+                
+                // Preload next pages
+                this.preloadNextPages(num);
             }
         }
 
@@ -407,27 +383,6 @@ document.addEventListener('DOMContentLoaded', function() {
             errorDiv.textContent = errorMessage;
         }
 
-
-
-       /*     downloadPdf(url) {
-        try {
-            // Create a temporary link element
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = url.split('/').pop() || 'document.pdf';
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            
-            // Add to DOM, click, then remove
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } catch (error) {
-            console.error('Download failed:', error);
-            // Fallback: open in new tab
-            window.open(url, '_blank', 'noopener,noreferrer');
-        }
-        } */
 
     }    
     // Fixed Book Selector functionality
@@ -651,6 +606,34 @@ document.addEventListener('DOMContentLoaded', function() {
         document.head.appendChild(style);
     }
 
-
-    
+    // Add CSS for progress bar
+    const style = document.createElement('style');
+    style.textContent = `
+        .pdf-loading-progress {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 300px;
+            text-align: center;
+        }
+        .progress-bar {
+            background: rgba(255,255,255,0.1);
+            height: 4px;
+            border-radius: 2px;
+            margin: 10px 0;
+        }
+        .progress {
+            background: #3498db;
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            color: white;
+            font-size: 14px;
+        }
+    `;
+    document.head.appendChild(style);
 });
