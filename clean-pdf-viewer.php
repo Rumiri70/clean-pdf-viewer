@@ -999,29 +999,29 @@ class CleanPDFViewer {
 private function get_book_selector_js() {
     return '
     document.addEventListener("DOMContentLoaded", function() {
-        // Function to initialize download buttons in PDF viewer
+        // Function to initialize download buttons in PDF viewer using event delegation
         function initializeDownloadButtons() {
-            document.querySelectorAll(".pdf-download-btn").forEach(function(btn) {
-                // Remove existing listeners to prevent duplicates
-                btn.replaceWith(btn.cloneNode(true));
-            });
-            
-            // Re-attach listeners to fresh buttons
-            document.querySelectorAll(".pdf-download-btn").forEach(function(btn) {
-                btn.addEventListener("click", function(e) {
+            // Use event delegation on document body to catch dynamically loaded buttons
+            document.body.addEventListener("click", function(e) {
+                if (e.target.classList.contains("pdf-download-btn")) {
                     e.preventDefault();
                     
-                    const bookId = this.dataset.bookId;
+                    const bookId = e.target.dataset.bookId;
+                    console.log("Download button clicked for book ID:", bookId);
+                    
                     const modal = document.getElementById("mpesa-payment-modal");
+                    console.log("Modal element:", modal);
                     
                     if (modal) {
                         modal.setAttribute("data-book-id", bookId);
                         modal.style.display = "block";
+                        console.log("Modal opened for book ID:", bookId);
                     } else {
-                        console.error("M-Pesa modal not found");
+                        console.error("M-Pesa modal not found - checking DOM...");
+                        console.log("All modals in document:", document.querySelectorAll("[id*=modal]"));
                         alert("Download system not available. Please try again later.");
                     }
-                });
+                }
             });
         }
         
@@ -1077,8 +1077,7 @@ private function get_book_selector_js() {
                         container.innerHTML = data.data.html;
                         container.classList.add("loaded");
                         
-                        // Re-initialize download buttons after loading new viewer
-                        initializeDownloadButtons();
+                        // No need to re-initialize - event delegation handles it automatically
                         
                         // Announce to screen readers
                         const announcement = document.querySelector(".sr-only");
@@ -1159,7 +1158,6 @@ private function get_book_selector_js() {
     });
     ';
 }
-
     // Database helper methods
     private function get_all_books() {
         global $wpdb;
