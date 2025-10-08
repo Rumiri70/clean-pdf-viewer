@@ -360,7 +360,6 @@ class CleanPDFViewer {
         </script>
         <?php
     }
-
     // Enhanced add_book_page with server limits display
     public function add_book_page() {
                 
@@ -610,7 +609,6 @@ class CleanPDFViewer {
             return array('success' => false, 'message' => 'An unexpected error occurred: ' . $e->getMessage());
         }
     }
-
     // Parse size strings like "8M" to bytes
     private function parse_size($size) {
         $unit = preg_replace('/[^bkmgtpezy]/i', '', $size);
@@ -621,8 +619,7 @@ class CleanPDFViewer {
         } else {
             return round($size);
         }
-    }   
-
+    } 
     public function toggle_book_status() {
         // Verify nonce and permissions
         if (!wp_verify_nonce($_POST['nonce'], 'toggle_status_nonce') || !current_user_can('manage_options')) {
@@ -663,7 +660,6 @@ class CleanPDFViewer {
             wp_send_json_error('Failed to update status');
         }
     }
-
     public function delete_book() {
         // Verify nonce and permissions
         if (!wp_verify_nonce($_POST['nonce'], 'delete_book_nonce') || !current_user_can('manage_options')) {
@@ -705,7 +701,6 @@ class CleanPDFViewer {
             wp_send_json_error('Failed to delete book');
         }
     }
-
     private function bulk_delete_books($book_ids) {
         $deleted_count = 0;
         global $wpdb;
@@ -789,6 +784,7 @@ class CleanPDFViewer {
                     <button class="pdf-btn pdf-zoom-out" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom Out</button>
                     <span class="pdf-zoom-level">100%</span>
                     <button class="pdf-btn pdf-zoom-in" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom In</button>
+                    <button class="download-book-btn" data-book-id="<?php echo esc_attr($book->id); ?>">Download</button>
                     <button class="pdf-btn pdf-fullscreen" data-viewer="<?php echo esc_attr($viewer_id); ?>">Fullscreen</button>
                 </div>
             </div>
@@ -839,9 +835,9 @@ class CleanPDFViewer {
                                 <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'Currently Reading' : 'Read Book'; ?>
                             </button>
                             
-                            <button class="download-book-btn" data-book-id="<?php echo esc_attr($book->id); ?>">
+                         <!--   <button class="download-book-btn" data-book-id="<php echo esc_attr($book->id); ?>">
                                 Download
-                            </button>
+                            </button> -->
                         </div>
                     </div>
                 <?php endforeach; ?>
