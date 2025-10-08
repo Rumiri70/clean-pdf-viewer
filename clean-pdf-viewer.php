@@ -742,7 +742,7 @@ class CleanPDFViewer {
         return $deleted_count;
     }
 
-    // Enhanced PDF Viewer shortcode
+        // Enhanced PDF Viewer shortcode
     public function pdf_viewer_shortcode($atts) {
         $atts = shortcode_atts(array(
             'url' => '',
@@ -778,7 +778,7 @@ class CleanPDFViewer {
         
         ob_start();
         ?>
-        <div class="clean-pdf-viewer-container" style="width: <?php echo esc_attr($atts['width']); ?>;">
+        <div class="clean-pdf-viewer-container" style="width: <?php echo esc_attr($atts['width']); ?>; height: <?php echo esc_attr($atts['height']); ?>;">
             <div class="pdf-controls">
                 <div class="pdf-controls-left">
                     <button class="pdf-btn pdf-prev" data-viewer="<?php echo esc_attr($viewer_id); ?>">← Previous</button>
@@ -789,8 +789,10 @@ class CleanPDFViewer {
                     <button class="pdf-btn pdf-zoom-out" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom Out</button>
                     <span class="pdf-zoom-level">100%</span>
                     <button class="pdf-btn pdf-zoom-in" data-viewer="<?php echo esc_attr($viewer_id); ?>">Zoom In</button>
-                    <button class="pdf-btn download-book-btn" data-book-id="<?php echo esc_attr($atts['book_id']); ?>">Download</button>
                     <button class="pdf-btn pdf-fullscreen" data-viewer="<?php echo esc_attr($viewer_id); ?>">Fullscreen</button>
+                    <?php if (!empty($atts['book_id'])): ?>
+                    <button class="pdf-btn pdf-download-btn" data-book-id="<?php echo esc_attr($atts['book_id']); ?>">Download</button>
+                    <?php endif; ?>
                 </div>
             </div>
             <div class="pdf-viewer-wrapper">
@@ -804,8 +806,7 @@ class CleanPDFViewer {
         return ob_get_clean();
     }
 
-
-// Enhanced Book Selector shortcode with M-Pesa download buttons
+    // Enhanced Book Selector shortcode with M-Pesa download buttons
     public function book_selector_shortcode($atts) {
         $atts = shortcode_atts(array(
             'show_description' => 'true',
@@ -838,10 +839,6 @@ class CleanPDFViewer {
                                     data-height="<?php echo esc_attr($atts['height']); ?>"
                                     <?php echo $index === 0 ? 'data-auto-load="true"' : ''; ?>>
                                 <?php echo $index === 0 && $atts['auto_load_first'] === 'true' ? 'Currently Reading' : 'Read Book'; ?>
-                            </button>
-                            
-                            <button class="download-book-btn" data-book-id="<?php echo esc_attr($book->id); ?>">
-                                Download
                             </button>
                         </div>
                     </div>
@@ -882,56 +879,6 @@ class CleanPDFViewer {
                 <?php endforeach; ?>
             ]
         }
-        </script>
-
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Handle download button clicks
-                document.querySelectorAll('.download-book-btn').forEach(function(btn) {
-                    btn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        
-                        // Store the book ID for the M-Pesa modal
-                        const bookId = this.dataset.bookId;
-                        const modal = document.getElementById('mpesa-payment-modal');
-                        
-                        if (modal) {
-                            // Store book ID in modal for later use
-                            modal.setAttribute('data-book-id', bookId);
-                            modal.style.display = 'block';
-                        } else {
-                            console.error('M-Pesa modal not found');
-                            alert('Download system not available. Please try again later.');
-                        }
-                    });
-                });
-
-                // Handle modal close buttons
-                const modal = document.getElementById('mpesa-payment-modal');
-                if (modal) {
-                    const closeBtn = modal.querySelector('.mpesa-close');
-                    const cancelBtn = modal.querySelector('.mpesa-cancel');
-
-                    if (closeBtn) {
-                        closeBtn.addEventListener('click', function() {
-                            modal.style.display = 'none';
-                        });
-                    }
-
-                    if (cancelBtn) {
-                        cancelBtn.addEventListener('click', function() {
-                            modal.style.display = 'none';
-                        });
-                    }
-
-                    // Close modal when clicking outside
-                    window.addEventListener('click', function(event) {
-                        if (event.target === modal) {
-                            modal.style.display = 'none';
-                        }
-                    });
-                }
-            });
         </script>
 
         <?php
@@ -1049,111 +996,169 @@ class CleanPDFViewer {
         ));
     }   
 
-    private function get_book_selector_js() {
-        return '
-        document.addEventListener("DOMContentLoaded", function() {
-            // Handle book selection
-            document.querySelectorAll(".read-book-btn").forEach(function(btn) {
+private function get_book_selector_js() {
+    return '
+    document.addEventListener("DOMContentLoaded", function() {
+        // Function to initialize download buttons in PDF viewer
+        function initializeDownloadButtons() {
+            document.querySelectorAll(".pdf-download-btn").forEach(function(btn) {
+                // Remove existing listeners to prevent duplicates
+                btn.replaceWith(btn.cloneNode(true));
+            });
+            
+            // Re-attach listeners to fresh buttons
+            document.querySelectorAll(".pdf-download-btn").forEach(function(btn) {
                 btn.addEventListener("click", function(e) {
                     e.preventDefault();
                     
                     const bookId = this.dataset.bookId;
-                    const width = this.dataset.width || "100%";
-                    const height = this.dataset.height || "auto";
-                    const container = document.getElementById("pdf-viewer-container");
+                    const modal = document.getElementById("mpesa-payment-modal");
                     
-                    if (!container || !bookId) return;
-                    
-                    // Update button states
-                    document.querySelectorAll(".read-book-btn").forEach(b => {
-                        b.classList.remove("active");
-                        b.textContent = "Read Book";
-                    });
-                    
-                    this.classList.add("active");
-                    this.textContent = "Currently Reading";
-                    
-                    // Show loading
-                    container.innerHTML = `
-                        <div class="pdf-viewer-loading">
-                            <div class="book-loading"></div>
-                            <p>${cleanPdfAjax.strings.loading_book}</p>
-                        </div>
-                    `;
-                    
-                    // Load new viewer via AJAX
-                    fetch(cleanPdfAjax.ajax_url, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/x-www-form-urlencoded",
-                        },
-                        body: new URLSearchParams({
-                            action: "load_pdf_viewer",
-                            book_id: bookId,
-                            width: width,
-                            height: height,
-                            nonce: cleanPdfAjax.load_pdf_nonce
-                        })
+                    if (modal) {
+                        modal.setAttribute("data-book-id", bookId);
+                        modal.style.display = "block";
+                    } else {
+                        console.error("M-Pesa modal not found");
+                        alert("Download system not available. Please try again later.");
+                    }
+                });
+            });
+        }
+        
+        // Initialize download buttons on page load
+        initializeDownloadButtons();
+        
+        // Handle book selection
+        document.querySelectorAll(".read-book-btn").forEach(function(btn) {
+            btn.addEventListener("click", function(e) {
+                e.preventDefault();
+                
+                const bookId = this.dataset.bookId;
+                const width = this.dataset.width || "100%";
+                const height = this.dataset.height || "auto";
+                const container = document.getElementById("pdf-viewer-container");
+                
+                if (!container || !bookId) return;
+                
+                // Update button states
+                document.querySelectorAll(".read-book-btn").forEach(b => {
+                    b.classList.remove("active");
+                    b.textContent = "Read Book";
+                });
+                
+                this.classList.add("active");
+                this.textContent = "Currently Reading";
+                
+                // Show loading
+                container.innerHTML = `
+                    <div class="pdf-viewer-loading">
+                        <div class="book-loading"></div>
+                        <p>${cleanPdfAjax.strings.loading_book}</p>
+                    </div>
+                `;
+                
+                // Load new viewer via AJAX
+                fetch(cleanPdfAjax.ajax_url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    body: new URLSearchParams({
+                        action: "load_pdf_viewer",
+                        book_id: bookId,
+                        width: width,
+                        height: height,
+                        nonce: cleanPdfAjax.load_pdf_nonce
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            container.innerHTML = data.data.html;
-                            container.classList.add("loaded");
-                            
-                            // Announce to screen readers
-                            const announcement = document.querySelector(".sr-only");
-                            if (announcement) {
-                                announcement.textContent = `${cleanPdfAjax.strings.book_loaded}: ${data.data.book_title}`;
-                            }
-                            
-                            // Scroll to viewer
-                            container.scrollIntoView({ behavior: "smooth", block: "start" });
-                            
-                            // Re-initialize PDF viewer if needed
-                            if (typeof initializePdfViewer === "function") {
-                                initializePdfViewer();
-                            }
-                        } else {
-                            container.innerHTML = `
-                                <div class="pdf-error">
-                                    <p>${cleanPdfAjax.strings.error_loading_book}: ${data.data.message}</p>
-                                    <button onclick="location.reload()" class="pdf-btn">Try Again</button>
-                                </div>
-                            `;
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        container.innerHTML = data.data.html;
+                        container.classList.add("loaded");
+                        
+                        // Re-initialize download buttons after loading new viewer
+                        initializeDownloadButtons();
+                        
+                        // Announce to screen readers
+                        const announcement = document.querySelector(".sr-only");
+                        if (announcement) {
+                            announcement.textContent = `${cleanPdfAjax.strings.book_loaded}: ${data.data.book_title}`;
                         }
-                    })
-                    .catch(error => {
-                        console.error("Error loading PDF viewer:", error);
+                        
+                        // Scroll to viewer
+                        container.scrollIntoView({ behavior: "smooth", block: "start" });
+                        
+                        // Re-initialize PDF viewer if needed
+                        if (typeof initializePdfViewer === "function") {
+                            initializePdfViewer();
+                        }
+                    } else {
                         container.innerHTML = `
                             <div class="pdf-error">
-                                <p>${cleanPdfAjax.strings.error_loading_book}</p>
+                                <p>${cleanPdfAjax.strings.error_loading_book}: ${data.data.message}</p>
                                 <button onclick="location.reload()" class="pdf-btn">Try Again</button>
                             </div>
                         `;
-                    });
+                    }
+                })
+                .catch(error => {
+                    console.error("Error loading PDF viewer:", error);
+                    container.innerHTML = `
+                        <div class="pdf-error">
+                            <p>${cleanPdfAjax.strings.error_loading_book}</p>
+                            <button onclick="location.reload()" class="pdf-btn">Try Again</button>
+                        </div>
+                    `;
                 });
             });
-            
-            // Auto-load first book if specified
-            const autoLoadBtn = document.querySelector(".read-book-btn[data-auto-load=\'true\']");
-            if (autoLoadBtn) {
-                const container = document.getElementById("pdf-viewer-container");
-                if (container) {
-                    container.classList.add("loaded");
-                    
-                    // Announce to screen readers
-                    setTimeout(() => {
-                        const announcement = document.querySelector(".sr-only");
-                        if (announcement) {
-                            announcement.textContent = `${cleanPdfAjax.strings.book_loaded}`;
-                        }
-                    }, 1000);
-                }
-            }
         });
-        ';
-    }
+        
+        // Handle modal close buttons
+        const modal = document.getElementById("mpesa-payment-modal");
+        if (modal) {
+            const closeBtn = modal.querySelector(".mpesa-close");
+            const cancelBtn = modal.querySelector(".mpesa-cancel");
+
+            if (closeBtn) {
+                closeBtn.addEventListener("click", function() {
+                    modal.style.display = "none";
+                });
+            }
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener("click", function() {
+                    modal.style.display = "none";
+                });
+            }
+
+            // Close modal when clicking outside
+            window.addEventListener("click", function(event) {
+                if (event.target === modal) {
+                    modal.style.display = "none";
+                }
+            });
+        }
+        
+        // Auto-load first book if specified
+        const autoLoadBtn = document.querySelector(".read-book-btn[data-auto-load=\'true\']");
+        if (autoLoadBtn) {
+            const container = document.getElementById("pdf-viewer-container");
+            if (container) {
+                container.classList.add("loaded");
+                
+                // Announce to screen readers
+                setTimeout(() => {
+                    const announcement = document.querySelector(".sr-only");
+                    if (announcement) {
+                        announcement.textContent = `${cleanPdfAjax.strings.book_loaded}`;
+                    }
+                }, 1000);
+            }
+        }
+    });
+    ';
+}
 
     // Database helper methods
     private function get_all_books() {
@@ -1333,6 +1338,8 @@ class CleanPDFViewer {
         .pdf-btn:hover{background:#2980b9;transform:translateY(-2px)}
         .pdf-btn:disabled{background:#7f8c8d;cursor:not-allowed;transform:none}
         .pdf-fullscreen{background:#9b59b6!important}
+        .pdf-download-btn{background:linear-gradient(135deg,#e67e22,#d35400)!important}
+        .pdf-download-btn:hover{background:linear-gradient(135deg,#d35400,#c0392b)!important}
         .pdf-page-info,.pdf-zoom-level{color:white;font-weight:bold;font-size:14px;background:rgba(255,255,255,0.1);padding:8px 12px;border-radius:4px}
         .pdf-viewer-wrapper{background:white;overflow:auto;height:calc(100% - 70px);display:flex;justify-content:center;align-items:flex-start;padding:20px}
         .pdf-canvas{max-width:100%;box-shadow:0 4px 8px rgba(0,0,0,0.1);border-radius:4px}
@@ -1346,12 +1353,9 @@ class CleanPDFViewer {
         .book-description{color:#666;font-size:14px;margin:10px 0}
         .book-size{color:#999;font-size:12px;font-weight:bold}
         .book-actions{display:flex;flex-direction:column;gap:10px;margin-top:15px}
-        .read-book-btn,.download-book-btn{border:none;padding:12px 24px;border-radius:25px;cursor:pointer;font-weight:600;transition:all 0.3s ease;font-size:14px;text-align:center}
-        .read-book-btn{background:linear-gradient(135deg,#3498db,#2980b9);color:white}
+        .read-book-btn{border:none;padding:12px 24px;border-radius:25px;cursor:pointer;font-weight:600;transition:all 0.3s ease;font-size:14px;text-align:center;background:linear-gradient(135deg,#3498db,#2980b9);color:white}
         .read-book-btn.active{background:linear-gradient(135deg,#27ae60,#219a52);box-shadow:0 4px 15px rgba(39,174,96,0.4)}
-        .download-book-btn{background:linear-gradient(135deg,#e67e22,#d35400);color:white}
-        .read-book-btn:hover,.download-book-btn:hover{transform:translateY(-2px)}
-        .download-book-btn:hover{background:linear-gradient(135deg,#d35400,#c0392b)}
+        .read-book-btn:hover{transform:translateY(-2px)}
         #pdf-viewer-container{margin-top:40px;opacity:0;transition:all 0.5s ease}
         #pdf-viewer-container.loaded{opacity:1}
         .pdf-viewer-placeholder{text-align:center;padding:60px 20px;color:#666;border:2px dashed #ddd;border-radius:12px;background:#f9f9f9}
@@ -1360,13 +1364,11 @@ class CleanPDFViewer {
         @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
         @media (max-width:768px){
             .pdf-controls{flex-direction:column}
+            .pdf-controls-left,.pdf-controls-right{width:100%;justify-content:center}
             .book-grid{grid-template-columns:1fr}
-            .book-actions{flex-direction:row;justify-content:center}
-            .read-book-btn,.download-book-btn{flex:1;max-width:140px}
         }
         ';
     }
-
     // Inline JS fallback (basic functionality)
     private function get_inline_js() {
         return '
