@@ -749,7 +749,7 @@ class CleanPDFViewer {
             'pdf' => '',
             'book_id' => '',
             'width' => '100%',
-            'height' => '600px'
+            //'height' => '600px'
         ), $atts);
 
         // Handle book_id parameter

@@ -535,6 +535,10 @@
     .pdf-viewer-wrapper {
         padding-bottom: 120px; /* Add space for fixed controls */
     }
+
+    .pdf-canvas {
+        height: 300px !important; /* Limit height on small screens */
+    }
     
     /* Stack buttons in two rows on very small screens */
     @media (max-width: 480px) {
