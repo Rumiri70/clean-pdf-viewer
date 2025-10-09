@@ -433,6 +433,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 () => this.toggleFullscreen()
             );
 
+            // Add download button handler
+            this.addEventListenerWithCleanup(
+                this.container.querySelector('.pdf-download-btn'),
+                'click',
+                (e) => {
+                    e.preventDefault();
+                    const bookId = e.target.dataset.bookId;
+                    
+                    // Find or create modal
+                    let modal = document.getElementById('mpesa-payment-modal');
+                    if (!modal) {
+                        // Create modal if it doesn't exist
+                        modal = document.createElement('div');
+                        modal.id = 'mpesa-payment-modal';
+                        modal.className = 'mpesa-modal';
+                        document.body.appendChild(modal);
+                    }
+
+                    // Update modal data and show it
+                    modal.setAttribute('data-book-id', bookId);
+                    modal.style.display = 'block';
+
+                    // Trigger custom event for M-Pesa integration
+                    const event = new CustomEvent('mpesa-download-initiated', {
+                        detail: { bookId: bookId }
+                    });
+                    document.dispatchEvent(event);
+
+                    console.log('Download modal triggered for book:', bookId);
+                }
+            );
+
             // Keyboard navigation
             this.addEventListenerWithCleanup(
                 document,
@@ -523,6 +555,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     e.preventDefault();
                     this.loadBookViewer(e.target, viewerContainer);
                 });
+            });
+
+            // Listen for M-Pesa modal triggers
+            document.addEventListener('mpesa-download-initiated', (e) => {
+                const bookId = e.detail.bookId;
+                const modal = document.getElementById('mpesa-payment-modal');
+                if (modal) {
+                    modal.style.display = 'block';
+                    modal.setAttribute('data-book-id', bookId);
+                } else {
+                    console.error('M-Pesa modal not found');
+                }
             });
         }
 

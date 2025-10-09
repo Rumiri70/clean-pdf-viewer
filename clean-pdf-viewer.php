@@ -996,169 +996,169 @@ class CleanPDFViewer {
         ));
     }   
 
-private function get_book_selector_js() {
-    return '
-    document.addEventListener("DOMContentLoaded", function() {
-        // Function to initialize download buttons in PDF viewer using event delegation
-        function initializeDownloadButtons() {
-            // Use event delegation on document body to catch dynamically loaded buttons
-            document.body.addEventListener("click", function(e) {
-                if (e.target.classList.contains("pdf-download-btn")) {
+    private function get_book_selector_js() {
+        return '
+        document.addEventListener("DOMContentLoaded", function() {
+            // Function to initialize download buttons in PDF viewer using event delegation
+            function initializeDownloadButtons() {
+                // Use event delegation on document body to catch dynamically loaded buttons
+                document.body.addEventListener("click", function(e) {
+                    if (e.target.classList.contains("pdf-download-btn")) {
+                        e.preventDefault();
+                        
+                        const bookId = e.target.dataset.bookId;
+                        console.log("Download button clicked for book ID:", bookId);
+                        
+                        const modal = document.getElementById("mpesa-payment-modal");
+                        console.log("Modal element:", modal);
+                        
+                        if (modal) {
+                            modal.setAttribute("data-book-id", bookId);
+                            modal.style.display = "block";
+                            console.log("Modal opened for book ID:", bookId);
+                        } else {
+                            console.error("M-Pesa modal not found - checking DOM...");
+                            console.log("All modals in document:", document.querySelectorAll("[id*=modal]"));
+                            alert("Download system not available. Please try again later.");
+                        }
+                    }
+                });
+            }
+            
+            // Initialize download buttons on page load
+            initializeDownloadButtons();
+            
+            // Handle book selection
+            document.querySelectorAll(".read-book-btn").forEach(function(btn) {
+                btn.addEventListener("click", function(e) {
                     e.preventDefault();
                     
-                    const bookId = e.target.dataset.bookId;
-                    console.log("Download button clicked for book ID:", bookId);
+                    const bookId = this.dataset.bookId;
+                    const width = this.dataset.width || "100%";
+                    const height = this.dataset.height || "auto";
+                    const container = document.getElementById("pdf-viewer-container");
                     
-                    const modal = document.getElementById("mpesa-payment-modal");
-                    console.log("Modal element:", modal);
+                    if (!container || !bookId) return;
                     
-                    if (modal) {
-                        modal.setAttribute("data-book-id", bookId);
-                        modal.style.display = "block";
-                        console.log("Modal opened for book ID:", bookId);
-                    } else {
-                        console.error("M-Pesa modal not found - checking DOM...");
-                        console.log("All modals in document:", document.querySelectorAll("[id*=modal]"));
-                        alert("Download system not available. Please try again later.");
-                    }
-                }
-            });
-        }
-        
-        // Initialize download buttons on page load
-        initializeDownloadButtons();
-        
-        // Handle book selection
-        document.querySelectorAll(".read-book-btn").forEach(function(btn) {
-            btn.addEventListener("click", function(e) {
-                e.preventDefault();
-                
-                const bookId = this.dataset.bookId;
-                const width = this.dataset.width || "100%";
-                const height = this.dataset.height || "auto";
-                const container = document.getElementById("pdf-viewer-container");
-                
-                if (!container || !bookId) return;
-                
-                // Update button states
-                document.querySelectorAll(".read-book-btn").forEach(b => {
-                    b.classList.remove("active");
-                    b.textContent = "Read Book";
-                });
-                
-                this.classList.add("active");
-                this.textContent = "Currently Reading";
-                
-                // Show loading
-                container.innerHTML = `
-                    <div class="pdf-viewer-loading">
-                        <div class="book-loading"></div>
-                        <p>${cleanPdfAjax.strings.loading_book}</p>
-                    </div>
-                `;
-                
-                // Load new viewer via AJAX
-                fetch(cleanPdfAjax.ajax_url, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/x-www-form-urlencoded",
-                    },
-                    body: new URLSearchParams({
-                        action: "load_pdf_viewer",
-                        book_id: bookId,
-                        width: width,
-                        height: height,
-                        nonce: cleanPdfAjax.load_pdf_nonce
+                    // Update button states
+                    document.querySelectorAll(".read-book-btn").forEach(b => {
+                        b.classList.remove("active");
+                        b.textContent = "Read Book";
+                    });
+                    
+                    this.classList.add("active");
+                    this.textContent = "Currently Reading";
+                    
+                    // Show loading
+                    container.innerHTML = `
+                        <div class="pdf-viewer-loading">
+                            <div class="book-loading"></div>
+                            <p>${cleanPdfAjax.strings.loading_book}</p>
+                        </div>
+                    `;
+                    
+                    // Load new viewer via AJAX
+                    fetch(cleanPdfAjax.ajax_url, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded",
+                        },
+                        body: new URLSearchParams({
+                            action: "load_pdf_viewer",
+                            book_id: bookId,
+                            width: width,
+                            height: height,
+                            nonce: cleanPdfAjax.load_pdf_nonce
+                        })
                     })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        container.innerHTML = data.data.html;
-                        container.classList.add("loaded");
-                        
-                        // No need to re-initialize - event delegation handles it automatically
-                        
-                        // Announce to screen readers
-                        const announcement = document.querySelector(".sr-only");
-                        if (announcement) {
-                            announcement.textContent = `${cleanPdfAjax.strings.book_loaded}: ${data.data.book_title}`;
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            container.innerHTML = data.data.html;
+                            container.classList.add("loaded");
+                            
+                            // No need to re-initialize - event delegation handles it automatically
+                            
+                            // Announce to screen readers
+                            const announcement = document.querySelector(".sr-only");
+                            if (announcement) {
+                                announcement.textContent = `${cleanPdfAjax.strings.book_loaded}: ${data.data.book_title}`;
+                            }
+                            
+                            // Scroll to viewer
+                            container.scrollIntoView({ behavior: "smooth", block: "start" });
+                            
+                            // Re-initialize PDF viewer if needed
+                            if (typeof initializePdfViewer === "function") {
+                                initializePdfViewer();
+                            }
+                        } else {
+                            container.innerHTML = `
+                                <div class="pdf-error">
+                                    <p>${cleanPdfAjax.strings.error_loading_book}: ${data.data.message}</p>
+                                    <button onclick="location.reload()" class="pdf-btn">Try Again</button>
+                                </div>
+                            `;
                         }
-                        
-                        // Scroll to viewer
-                        container.scrollIntoView({ behavior: "smooth", block: "start" });
-                        
-                        // Re-initialize PDF viewer if needed
-                        if (typeof initializePdfViewer === "function") {
-                            initializePdfViewer();
-                        }
-                    } else {
+                    })
+                    .catch(error => {
+                        console.error("Error loading PDF viewer:", error);
                         container.innerHTML = `
                             <div class="pdf-error">
-                                <p>${cleanPdfAjax.strings.error_loading_book}: ${data.data.message}</p>
+                                <p>${cleanPdfAjax.strings.error_loading_book}</p>
                                 <button onclick="location.reload()" class="pdf-btn">Try Again</button>
                             </div>
                         `;
-                    }
-                })
-                .catch(error => {
-                    console.error("Error loading PDF viewer:", error);
-                    container.innerHTML = `
-                        <div class="pdf-error">
-                            <p>${cleanPdfAjax.strings.error_loading_book}</p>
-                            <button onclick="location.reload()" class="pdf-btn">Try Again</button>
-                        </div>
-                    `;
+                    });
                 });
             });
-        });
-        
-        // Handle modal close buttons
-        const modal = document.getElementById("mpesa-payment-modal");
-        if (modal) {
-            const closeBtn = modal.querySelector(".mpesa-close");
-            const cancelBtn = modal.querySelector(".mpesa-cancel");
+            
+            // Handle modal close buttons
+            const modal = document.getElementById("mpesa-payment-modal");
+            if (modal) {
+                const closeBtn = modal.querySelector(".mpesa-close");
+                const cancelBtn = modal.querySelector(".mpesa-cancel");
 
-            if (closeBtn) {
-                closeBtn.addEventListener("click", function() {
-                    modal.style.display = "none";
-                });
-            }
-
-            if (cancelBtn) {
-                cancelBtn.addEventListener("click", function() {
-                    modal.style.display = "none";
-                });
-            }
-
-            // Close modal when clicking outside
-            window.addEventListener("click", function(event) {
-                if (event.target === modal) {
-                    modal.style.display = "none";
+                if (closeBtn) {
+                    closeBtn.addEventListener("click", function() {
+                        modal.style.display = "none";
+                    });
                 }
-            });
-        }
-        
-        // Auto-load first book if specified
-        const autoLoadBtn = document.querySelector(".read-book-btn[data-auto-load=\'true\']");
-        if (autoLoadBtn) {
-            const container = document.getElementById("pdf-viewer-container");
-            if (container) {
-                container.classList.add("loaded");
-                
-                // Announce to screen readers
-                setTimeout(() => {
-                    const announcement = document.querySelector(".sr-only");
-                    if (announcement) {
-                        announcement.textContent = `${cleanPdfAjax.strings.book_loaded}`;
+
+                if (cancelBtn) {
+                    cancelBtn.addEventListener("click", function() {
+                        modal.style.display = "none";
+                    });
+                }
+
+                // Close modal when clicking outside
+                window.addEventListener("click", function(event) {
+                    if (event.target === modal) {
+                        modal.style.display = "none";
                     }
-                }, 1000);
+                });
             }
-        }
-    });
-    ';
-}
-    // Database helper methods
+            
+            // Auto-load first book if specified
+            const autoLoadBtn = document.querySelector(".read-book-btn[data-auto-load=\'true\']");
+            if (autoLoadBtn) {
+                const container = document.getElementById("pdf-viewer-container");
+                if (container) {
+                    container.classList.add("loaded");
+                    
+                    // Announce to screen readers
+                    setTimeout(() => {
+                        const announcement = document.querySelector(".sr-only");
+                        if (announcement) {
+                            announcement.textContent = `${cleanPdfAjax.strings.book_loaded}`;
+                        }
+                    }, 1000);
+                }
+            }
+        });
+        ';
+    }
+        // Database helper methods
     private function get_all_books() {
         global $wpdb;
         return $wpdb->get_results("SELECT * FROM {$this->table_name} ORDER BY created_at DESC");
