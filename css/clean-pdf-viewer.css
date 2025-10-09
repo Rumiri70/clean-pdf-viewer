@@ -537,7 +537,7 @@
     }
 
     .pdf-canvas {
-        height: 600px !important; /* Limit height on small screens */
+        max-height: 600px !important; /* Limit height on small screens */
     }
     
     /* Stack buttons in two rows on very small screens */
