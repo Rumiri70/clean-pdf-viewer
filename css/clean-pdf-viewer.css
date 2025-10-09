@@ -466,12 +466,12 @@
     width: 100vw !important;
     height: 100vh !important;
     z-index: 999999;
-    background: #2c3e50;
+    /*background: #2c3e50; */
 }
 
 .clean-pdf-viewer-container.fullscreen .pdf-viewer-wrapper {
     height: calc(100vh - 70px);
-    background: #34495e;
+    /* background: #34495e; */
 }
 
 .clean-pdf-viewer-container.fullscreen .pdf-canvas {
